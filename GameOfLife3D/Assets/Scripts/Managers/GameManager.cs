@@ -6,12 +6,46 @@ using Unity.Mathematics;
 
 public class GameManager : MonoBehaviour
 {
-    private Grid grid;
-    public float updateInterval = 1f;
-    private float lastUpdateTime;
+    public static GameManager Instance { get; private set; }
 
+    [Header("Settings :")]
+    public float minUpdateInterval = 0.1f;
+    public float maxUpdateInterval = 2f;
+
+    [SerializeField, Range(0.1f, 2f)]
+    private float updateInterval = 1f;
+
+    public float UpdateInterval
+    {
+        get => updateInterval;
+        set
+        {
+            updateInterval = Mathf.Clamp(value, minUpdateInterval, maxUpdateInterval);
+        }
+    }
+
+    [Header("Prefabs :")]
     public GameObject cellPrefab;
+    public Transform cellContainer;
+
+    private Grid grid;
     private Dictionary<int3, GameObject> cellObjects;
+
+    private float lastUpdateTime;
+    private bool isPaused = true;
+
+    private void Awake()
+    {
+        if (Instance == null)
+        {
+            Instance = this;
+            DontDestroyOnLoad(gameObject);
+        }
+        else
+        {
+            Destroy(gameObject);
+        }
+    }
 
     private void Start()
     {
@@ -22,7 +56,7 @@ public class GameManager : MonoBehaviour
 
     private void Update()
     {
-        if (Time.time - lastUpdateTime >= updateInterval)
+        if (!isPaused && Time.time - lastUpdateTime >= UpdateInterval)
         {
             UpdateGrid();
             lastUpdateTime = Time.time;
@@ -64,6 +98,7 @@ public class GameManager : MonoBehaviour
             if (kvp.Value == 1)
             {
                 grid.SetAlive(kvp.Key);
+
                 if (!cellObjects.ContainsKey(kvp.Key))
                 {
                     CreateCellObject(kvp.Key);
@@ -72,6 +107,7 @@ public class GameManager : MonoBehaviour
             else
             {
                 grid.RemoveCell(kvp.Key);
+
                 if (cellObjects.ContainsKey(kvp.Key))
                 {
                     DestroyCellObject(kvp.Key);
@@ -94,7 +130,7 @@ public class GameManager : MonoBehaviour
 
     private void CreateCellObject(int3 position)
     {
-        GameObject cellObject = Instantiate(cellPrefab, new Vector3(position.x, position.y, position.z), Quaternion.identity);
+        GameObject cellObject = Instantiate(cellPrefab, new Vector3(position.x, position.y, position.z), Quaternion.identity, cellContainer);
         cellObjects[position] = cellObject;
     }
 
@@ -105,5 +141,39 @@ public class GameManager : MonoBehaviour
             Destroy(cellObject);
             cellObjects.Remove(position);
         }
+    }
+
+    public void TogglePause()
+    {
+        isPaused = !isPaused;
+        Debug.Log(isPaused ? "Game Paused" : "Game Resumed");
+    }
+
+    public void ResetGrid()
+    {
+        // Destroy all existing cell objects
+        foreach (var cellObject in cellObjects.Values)
+        {
+            Destroy(cellObject);
+        }
+        cellObjects.Clear();
+
+        // Reset the grid
+        grid = new Grid();
+        InitializeGrid();
+
+        Debug.Log("Grid Reset");
+    }
+
+    public void IncreaseSpeed()
+    {
+        UpdateInterval -= 0.1f;
+        Debug.Log($"Speed Increased. New interval: {UpdateInterval}");
+    }
+
+    public void DecreaseSpeed()
+    {
+        UpdateInterval += 0.1f;
+        Debug.Log($"Speed Decreased. New interval: {UpdateInterval}");
     }
 }

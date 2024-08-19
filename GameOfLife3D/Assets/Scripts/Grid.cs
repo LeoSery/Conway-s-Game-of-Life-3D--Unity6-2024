@@ -52,6 +52,7 @@ public class Grid
         foreach (var offset in neighborOffsets)
         {
             int3 neighbor = position + offset;
+
             if (!cellStates.ContainsKey(neighbor))
             {
                 cellStates[neighbor] = 2;
@@ -72,6 +73,7 @@ public class Grid
                 foreach (var innerOffset in neighborOffsets)
                 {
                     int3 innerNeighbor = neighbor + innerOffset;
+
                     if (cellStates.TryGetValue(innerNeighbor, out byte innerState) && innerState == 1)
                     {
                         hasLivingNeighbor = true;

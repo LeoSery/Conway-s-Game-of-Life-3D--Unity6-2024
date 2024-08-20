@@ -11,3 +11,10 @@ public class Cell
         State = state;
     }
 }
+
+public static class CellState
+{
+    public const byte Dead = 0;
+    public const byte Alive = 1;
+    public const byte ActiveZone = 2;
+}

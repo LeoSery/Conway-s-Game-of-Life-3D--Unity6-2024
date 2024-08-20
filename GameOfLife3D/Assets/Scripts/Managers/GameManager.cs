@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 
 using UnityEngine;
 
@@ -11,6 +12,9 @@ public class GameManager : MonoBehaviour
     [Header("Settings :")]
     public float minUpdateInterval = 0.1f;
     public float maxUpdateInterval = 2f;
+    [Space(10)]
+    public int gridSize = 10;
+    public int cellSize = 1;
 
     [SerializeField, Range(0.1f, 2f)]
     private float updateInterval = 1f;
@@ -27,6 +31,7 @@ public class GameManager : MonoBehaviour
     [Header("Prefabs :")]
     public GameObject cellPrefab;
     public Transform cellContainer;
+    public VisualGrid visualGrid;
 
     private Grid grid;
     private Dictionary<int3, GameObject> cellObjects;
@@ -49,9 +54,12 @@ public class GameManager : MonoBehaviour
 
     private void Start()
     {
-        grid = new Grid();
-        cellObjects = new Dictionary<int3, GameObject>();
         InitializeGrid();
+
+        if (visualGrid != null)
+        {
+            visualGrid.Initialize(gridSize, cellSize);
+        }
     }
 
     private void Update()
@@ -65,37 +73,60 @@ public class GameManager : MonoBehaviour
 
     private void InitializeGrid()
     {
+        grid = new Grid(gridSize);
+        cellObjects = new Dictionary<int3, GameObject>();
+
         // Example: Create a simple pattern
-        grid.SetAlive(new int3(0, 0, 0));
-        grid.SetAlive(new int3(1, 0, 0));
-        grid.SetAlive(new int3(0, 1, 0));
-        grid.SetAlive(new int3(1, 1, 0));
-        grid.SetAlive(new int3(0, 0, 1));
+        grid.SetAlive(new int3(4, 4, 4));
+        grid.SetAlive(new int3(4, 4, 5));
+        grid.SetAlive(new int3(4, 5, 4));
+        grid.SetAlive(new int3(5, 4, 4));
+        grid.SetAlive(new int3(5, 5, 5));
+        grid.SetAlive(new int3(3, 4, 4));
+        grid.SetAlive(new int3(4, 3, 4));
 
         // Render initial cells
         foreach (var cell in grid.GetActiveCells())
         {
-            if (cell.State == 1) // Only render living cells
+            if (cell.State == CellState.Alive)
             {
                 CreateCellObject(cell.Position);
             }
         }
     }
 
+    public void ResizeGrid(int newSize)
+    {
+        gridSize = newSize;
+        grid.Resize(newSize);
+
+        if (visualGrid != null)
+        {
+            visualGrid.UpdateGridSize(gridSize, cellSize);
+        }
+    }
+
     private void UpdateGrid()
     {
         var newStates = new Dictionary<int3, byte>();
+        int aliveBefore = grid.GetActiveCells().Count(c => c.State == CellState.Alive);
 
         foreach (var cell in grid.GetActiveCells())
         {
-            int aliveNeighbors = grid.CountAliveNeighbors(cell.Position);
-            newStates[cell.Position] = DetermineNewState(cell.State, aliveNeighbors);
+            if (cell.State == CellState.Alive || cell.State == CellState.ActiveZone)
+            {
+                int aliveNeighbors = grid.CountAliveNeighbors(cell.Position);
+                byte newState = DetermineNewState(cell.State, aliveNeighbors);
+                newStates[cell.Position] = newState;
+
+                Debug.Log($"Cell at {cell.Position}: Current state > '{grid.GetStateNameFromValue(cell.State)}', Neighbors {aliveNeighbors}, New state > '{grid.GetStateNameFromValue(newState)}'");
+            }
         }
 
         // Apply new states and update rendering
         foreach (var kvp in newStates)
         {
-            if (kvp.Value == 1)
+            if (kvp.Value == CellState.Alive)
             {
                 grid.SetAlive(kvp.Key);
 
@@ -114,23 +145,33 @@ public class GameManager : MonoBehaviour
                 }
             }
         }
+
+        int aliveAfter = grid.GetActiveCells().Count(c => c.State == CellState.Alive);
+        Debug.Log($"Alive cells: Before {aliveBefore}, After {aliveAfter}");
     }
 
     private byte DetermineNewState(byte currentState, int aliveNeighbors)
     {
-        if (currentState == 1) // ALIVE
+        if (currentState == CellState.Alive)
         {
-            return (byte)((aliveNeighbors == 2 || aliveNeighbors == 3) ? 1 : 0);
+            // Une cellule vivante survit si elle a 4, 5 ou 6 voisins vivants
+            return (byte)((aliveNeighbors >= 4 && aliveNeighbors <= 6) ? CellState.Alive : CellState.Dead);
         }
         else
         {
-            return (byte)(aliveNeighbors == 3 ? 1 : 0);
+            // Une cellule morte naît si elle a exactement 4 voisins vivants
+            return (byte)(aliveNeighbors == 4 ? CellState.Alive : CellState.Dead);
         }
     }
 
     private void CreateCellObject(int3 position)
     {
-        GameObject cellObject = Instantiate(cellPrefab, new Vector3(position.x, position.y, position.z), Quaternion.identity, cellContainer);
+        Vector3 worldPosition = new Vector3(
+            position.x - (gridSize - 1) / 2f,
+            position.y - (gridSize - 1) / 2f,
+            position.z - (gridSize - 1) / 2f
+        ) * cellSize;
+        GameObject cellObject = Instantiate(cellPrefab, worldPosition, Quaternion.identity, cellContainer);
         cellObjects[position] = cellObject;
     }
 
@@ -159,7 +200,7 @@ public class GameManager : MonoBehaviour
         cellObjects.Clear();
 
         // Reset the grid
-        grid = new Grid();
+        grid = new Grid(gridSize);
         InitializeGrid();
 
         Debug.Log("Grid Reset");

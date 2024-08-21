@@ -9,14 +9,17 @@ public class GameManager : MonoBehaviour
 {
     public static GameManager Instance { get; private set; }
 
+    public delegate void CycleCompleteHandler();
+    public static event CycleCompleteHandler OnCycleComplete;
+
     [Header("Settings :")]
     public float minUpdateInterval = 0.1f;
-    public float maxUpdateInterval = 2f;
+    public float maxUpdateInterval = 10f;
     [Space(10)]
     public int gridSize = 10;
     public int cellSize = 1;
 
-    [SerializeField, Range(0.1f, 2f)]
+    [SerializeField, Range(0.1f, 10f)]
     private float updateInterval = 1f;
 
     public float UpdateInterval
@@ -33,9 +36,9 @@ public class GameManager : MonoBehaviour
     public Transform cellContainer;
     public VisualGrid visualGrid;
 
-    private Grid grid;
-    private Dictionary<int3, GameObject> cellObjects;
+    public Grid Grid { get; private set; }
 
+    private Dictionary<int3, GameObject> cellObjects;
     private float lastUpdateTime;
     private bool isPaused = true;
 
@@ -73,32 +76,33 @@ public class GameManager : MonoBehaviour
 
     private void InitializeGrid()
     {
-        grid = new Grid(gridSize);
+        Grid = new Grid(gridSize);
         cellObjects = new Dictionary<int3, GameObject>();
 
         // Example: Create a simple pattern
-        grid.SetAlive(new int3(4, 4, 4));
-        grid.SetAlive(new int3(4, 4, 5));
-        grid.SetAlive(new int3(4, 5, 4));
-        grid.SetAlive(new int3(5, 4, 4));
-        grid.SetAlive(new int3(5, 5, 5));
-        grid.SetAlive(new int3(3, 4, 4));
-        grid.SetAlive(new int3(4, 3, 4));
+        Grid.SetAlive(new int3(4, 4, 4));
+        Grid.SetAlive(new int3(4, 4, 5));
+        Grid.SetAlive(new int3(4, 5, 4));
+        Grid.SetAlive(new int3(5, 4, 4));
+        Grid.SetAlive(new int3(5, 5, 5));
+        Grid.SetAlive(new int3(3, 4, 4));
+        Grid.SetAlive(new int3(4, 3, 4));
 
         // Render initial cells
-        foreach (var cell in grid.GetActiveCells())
+        foreach (var cell in Grid.GetActiveCells())
         {
             if (cell.State == CellState.Alive)
             {
                 CreateCellObject(cell.Position);
             }
         }
+        StatManager.Instance.InitializeStats();
     }
 
     public void ResizeGrid(int newSize)
     {
         gridSize = newSize;
-        grid.Resize(newSize);
+        Grid.Resize(newSize);
 
         if (visualGrid != null)
         {
@@ -109,17 +113,15 @@ public class GameManager : MonoBehaviour
     private void UpdateGrid()
     {
         var newStates = new Dictionary<int3, byte>();
-        int aliveBefore = grid.GetActiveCells().Count(c => c.State == CellState.Alive);
+        int aliveBefore = Grid.GetActiveCells().Count(c => c.State == CellState.Alive);
 
-        foreach (var cell in grid.GetActiveCells())
+        foreach (var cell in Grid.GetActiveCells())
         {
             if (cell.State == CellState.Alive || cell.State == CellState.ActiveZone)
             {
-                int aliveNeighbors = grid.CountAliveNeighbors(cell.Position);
+                int aliveNeighbors = Grid.CountAliveNeighbors(cell.Position);
                 byte newState = DetermineNewState(cell.State, aliveNeighbors);
                 newStates[cell.Position] = newState;
-
-                Debug.Log($"Cell at {cell.Position}: Current state > '{grid.GetStateNameFromValue(cell.State)}', Neighbors {aliveNeighbors}, New state > '{grid.GetStateNameFromValue(newState)}'");
             }
         }
 
@@ -128,7 +130,7 @@ public class GameManager : MonoBehaviour
         {
             if (kvp.Value == CellState.Alive)
             {
-                grid.SetAlive(kvp.Key);
+                Grid.SetAlive(kvp.Key);
 
                 if (!cellObjects.ContainsKey(kvp.Key))
                 {
@@ -137,7 +139,7 @@ public class GameManager : MonoBehaviour
             }
             else
             {
-                grid.RemoveCell(kvp.Key);
+                Grid.RemoveCell(kvp.Key);
 
                 if (cellObjects.ContainsKey(kvp.Key))
                 {
@@ -145,21 +147,19 @@ public class GameManager : MonoBehaviour
                 }
             }
         }
-
-        int aliveAfter = grid.GetActiveCells().Count(c => c.State == CellState.Alive);
-        Debug.Log($"Alive cells: Before {aliveBefore}, After {aliveAfter}");
+        OnCycleComplete?.Invoke();
     }
 
     private byte DetermineNewState(byte currentState, int aliveNeighbors)
     {
         if (currentState == CellState.Alive)
         {
-            // Une cellule vivante survit si elle a 4, 5 ou 6 voisins vivants
+            // A living cell survives if it has 4, 5 or 6 living neighbors
             return (byte)((aliveNeighbors >= 4 && aliveNeighbors <= 6) ? CellState.Alive : CellState.Dead);
         }
         else
         {
-            // Une cellule morte naît si elle a exactement 4 voisins vivants
+            // A dead cell is born if it has exactly 4 living neighbors.
             return (byte)(aliveNeighbors == 4 ? CellState.Alive : CellState.Dead);
         }
     }
@@ -171,6 +171,7 @@ public class GameManager : MonoBehaviour
             position.y - (gridSize - 1) / 2f,
             position.z - (gridSize - 1) / 2f
         ) * cellSize;
+
         GameObject cellObject = Instantiate(cellPrefab, worldPosition, Quaternion.identity, cellContainer);
         cellObjects[position] = cellObject;
     }
@@ -187,6 +188,7 @@ public class GameManager : MonoBehaviour
     public void TogglePause()
     {
         isPaused = !isPaused;
+        StatManager.Instance.SetPaused(isPaused);
         Debug.Log(isPaused ? "Game Paused" : "Game Resumed");
     }
 
@@ -197,13 +199,16 @@ public class GameManager : MonoBehaviour
         {
             Destroy(cellObject);
         }
+
         cellObjects.Clear();
 
         // Reset the grid
-        grid = new Grid(gridSize);
+        Grid = new Grid(gridSize);
         InitializeGrid();
 
-        Debug.Log("Grid Reset");
+        StatManager.Instance.ResetStats();
+        StatManager.Instance.SetPaused(true);
+        Debug.Log("Grid and Stats Reset");
     }
 
     public void IncreaseSpeed()

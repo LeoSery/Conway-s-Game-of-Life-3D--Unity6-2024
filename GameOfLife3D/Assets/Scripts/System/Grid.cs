@@ -9,7 +9,7 @@ public class Grid
     private readonly Dictionary<int3, byte> cellStates;
 
     private int gridSize;
-    public int Size => gridSize;
+    public int GridSize => gridSize;
 
     private static readonly int3[] neighborOffsets =
     {
@@ -77,6 +77,7 @@ public class Grid
                 foreach (var innerOffset in neighborOffsets)
                 {
                     int3 innerNeighbor = neighbor + innerOffset;
+
                     if (IsWithinBounds(innerNeighbor) && cellStates.TryGetValue(innerNeighbor, out byte innerState) && innerState == 1)
                     {
                         hasLivingNeighbor = true;
@@ -124,6 +125,7 @@ public class Grid
 
         // Remove cells that are now out of bounds
         var cellsToRemove = cellStates.Keys.Where(pos => !IsWithinBounds(pos)).ToList();
+
         foreach (var pos in cellsToRemove)
         {
             RemoveCell(pos);

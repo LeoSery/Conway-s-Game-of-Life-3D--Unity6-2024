@@ -28,7 +28,7 @@ public class StatManager : MonoBehaviour
     private float currentFPS;
     public float CurrentFPS => currentFPS;
 
-    public int DeadCells => totalCells - aliveCells;
+    public int DeadCells => Mathf.Max(0, totalCells - aliveCells);
 
     private float fpsUpdateInterval = 0.5f;
     private float fpsTimer = 0f;
@@ -97,6 +97,11 @@ public class StatManager : MonoBehaviour
         }
     }
 
+    public void UpdateTotalCells()
+    {
+        totalCells = GetTotalCells();
+    }
+
     public void SetPaused(bool paused)
     {
         isPaused = paused;
@@ -106,7 +111,7 @@ public class StatManager : MonoBehaviour
     {
         currentCycle = 0;
         aliveCells = 0;
-        totalCells = 0;
+        totalCells = GetTotalCells();
         simulationTime = 0f;
         currentFPS = 0f;
         fpsTimer = 0f;

@@ -12,22 +12,27 @@ public class GameManager : MonoBehaviour
     public delegate void CycleCompleteHandler();
     public static event CycleCompleteHandler OnCycleComplete;
 
-    [Header("Settings :")]
-    public float minUpdateInterval = 0.1f;
-    public float maxUpdateInterval = 10f;
-    [Space(10)]
-    public int gridSize = 10;
-    public int cellSize = 1;
+    public delegate void PauseStateChangedHandler(bool isPaused);
+    public static event PauseStateChangedHandler OnPauseStateChanged;
 
+    [Header("Simulation Settings :")]
     [SerializeField, Range(0.1f, 10f)]
     private float updateInterval = 1f;
+    public int gridSize = 10;
+
+    [Header("Simulation Limits :")]
+    public int minGridSize = 5;
+    public int maxGridSize = 50;
+    [Space(10)]
+    public float minCycleSpeed = 0.1f;
+    public float maxCycleSpeed = 10f;
 
     public float UpdateInterval
     {
         get => updateInterval;
         set
         {
-            updateInterval = Mathf.Clamp(value, minUpdateInterval, maxUpdateInterval);
+            updateInterval = Mathf.Clamp(value, minCycleSpeed, maxCycleSpeed);
         }
     }
 
@@ -37,9 +42,11 @@ public class GameManager : MonoBehaviour
     public VisualGrid visualGrid;
 
     public Grid Grid { get; private set; }
+    public bool IsPaused => isPaused;
 
     private Dictionary<int3, GameObject> cellObjects;
     private float lastUpdateTime;
+    private int cellSize = 1;
     private bool isPaused = true;
 
     private void Awake()
@@ -108,6 +115,8 @@ public class GameManager : MonoBehaviour
         {
             visualGrid.UpdateGridSize(gridSize, cellSize);
         }
+        ResetGrid();
+        StatManager.Instance.UpdateTotalCells();
     }
 
     private void UpdateGrid()
@@ -189,6 +198,7 @@ public class GameManager : MonoBehaviour
     {
         isPaused = !isPaused;
         StatManager.Instance.SetPaused(isPaused);
+        OnPauseStateChanged?.Invoke(isPaused);
         Debug.Log(isPaused ? "Game Paused" : "Game Resumed");
     }
 

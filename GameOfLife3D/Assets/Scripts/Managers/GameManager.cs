@@ -55,6 +55,7 @@ public class GameManager : MonoBehaviour
         {
             Instance = this;
             DontDestroyOnLoad(gameObject);
+            InitializeGrid();
         }
         else
         {
@@ -64,12 +65,13 @@ public class GameManager : MonoBehaviour
 
     private void Start()
     {
-        InitializeGrid();
-
         if (visualGrid != null)
         {
             visualGrid.Initialize(gridSize, cellSize);
         }
+
+        // Initialiser les stats après que tous les managers sont initialisés
+        InitializeStats();
     }
 
     private void Update()
@@ -103,7 +105,20 @@ public class GameManager : MonoBehaviour
                 CreateCellObject(cell.Position);
             }
         }
-        StatManager.Instance.InitializeStats();
+
+        Debug.Log($"Grid initialized with size: {gridSize}");
+    }
+
+    private void InitializeStats()
+    {
+        if (StatManager.Instance != null)
+        {
+            StatManager.Instance.InitializeStats();
+        }
+        else
+        {
+            Debug.LogError("StatManager instance is null when trying to initialize stats.");
+        }
     }
 
     public void ResizeGrid(int newSize)

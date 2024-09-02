@@ -123,7 +123,6 @@ public class Grid
     {
         gridSize = newSize;
 
-        // Remove cells that are now out of bounds
         var cellsToRemove = cellStates.Keys.Where(pos => !IsWithinBounds(pos)).ToList();
 
         foreach (var pos in cellsToRemove)

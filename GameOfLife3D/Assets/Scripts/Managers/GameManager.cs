@@ -89,13 +89,13 @@ public class GameManager : MonoBehaviour
         cellObjects = new Dictionary<int3, GameObject>();
 
         // Example: Create a simple pattern
-        Grid.SetAlive(new int3(4, 4, 4));
-        Grid.SetAlive(new int3(4, 4, 5));
-        Grid.SetAlive(new int3(4, 5, 4));
-        Grid.SetAlive(new int3(5, 4, 4));
-        Grid.SetAlive(new int3(5, 5, 5));
-        Grid.SetAlive(new int3(3, 4, 4));
-        Grid.SetAlive(new int3(4, 3, 4));
+        //Grid.SetAlive(new int3(4, 4, 4));
+        //Grid.SetAlive(new int3(4, 4, 5));
+        //Grid.SetAlive(new int3(4, 5, 4));
+        //Grid.SetAlive(new int3(5, 4, 4));
+        //Grid.SetAlive(new int3(5, 5, 5));
+        //Grid.SetAlive(new int3(3, 4, 4));
+        //Grid.SetAlive(new int3(4, 3, 4));
 
         // Render initial cells
         foreach (var cell in Grid.GetActiveCells())
@@ -188,16 +188,48 @@ public class GameManager : MonoBehaviour
         }
     }
 
+    public void CreateCell(int3 position)
+    {
+        if (!Grid.IsAlive(position))
+        {
+            Grid.SetAlive(position);
+            CreateCellObject(position);
+            Debug.Log($"Cell created at position: {position}");
+        }
+        else
+        {
+            Debug.Log($"Cell already exists at position: {position}");
+        }
+    }
+
+    public void DestroyCell(int3 position)
+    {
+        if (Grid.IsAlive(position))
+        {
+            Grid.RemoveCell(position);
+            DestroyCellObject(position);
+            Debug.Log($"Cell destroyed at position: {position}");
+        }
+        else
+        {
+            Debug.Log($"No cell exists at position: {position}");
+        }
+    }
+
     private void CreateCellObject(int3 position)
     {
-        Vector3 worldPosition = new Vector3(
-            position.x - (gridSize - 1) / 2f,
-            position.y - (gridSize - 1) / 2f,
-            position.z - (gridSize - 1) / 2f
-        ) * cellSize;
+        if (!cellObjects.ContainsKey(position))
+        {
+            Vector3 worldPosition = new Vector3(
+                position.x - (gridSize - 1) / 2f,
+                position.y - (gridSize - 1) / 2f,
+                position.z - (gridSize - 1) / 2f
+            ) * cellSize;
 
-        GameObject cellObject = Instantiate(cellPrefab, worldPosition, Quaternion.identity, cellContainer);
-        cellObjects[position] = cellObject;
+            GameObject cellObject = Instantiate(cellPrefab, worldPosition, Quaternion.identity, cellContainer);
+            cellObjects[position] = cellObject;
+            Debug.Log($"Cell object created at position: {position}, World position: {worldPosition}");
+        }
     }
 
     private void DestroyCellObject(int3 position)

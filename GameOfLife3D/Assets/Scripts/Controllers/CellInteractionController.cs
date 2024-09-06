@@ -1,6 +1,5 @@
 using UnityEngine;
 using Unity.Mathematics;
-using System.Collections;
 
 public class CellInteractionController : MonoBehaviour
 {
@@ -24,6 +23,8 @@ public class CellInteractionController : MonoBehaviour
         }
 
         StartCoroutine(WaitForGameManager());
+
+        gridOffset = new Vector3(-4.5f, -4.5f, -4.5f);
     }
 
     private System.Collections.IEnumerator WaitForGameManager()
@@ -76,8 +77,8 @@ public class CellInteractionController : MonoBehaviour
 
     private int3? FindTargetCell(Ray ray)
     {
-        Vector3 gridMin = gridWorldPosition + gridOffset;
-        Vector3 gridMax = gridMin + new Vector3(grid.GridSize, grid.GridSize, grid.GridSize);
+        Vector3 gridMin = gridOffset;
+        Vector3 gridMax = -gridOffset; // Utiliser l'opposé du gridOffset pour le max
 
         float tMin, tMax;
         if (!IntersectRayBox(ray, gridMin, gridMax, out tMin, out tMax))
@@ -126,7 +127,7 @@ public class CellInteractionController : MonoBehaviour
 
     private int3 WorldToCellPosition(Vector3 worldPosition)
     {
-        Vector3 localPosition = worldPosition - (gridWorldPosition + gridOffset);
+        Vector3 localPosition = worldPosition - gridOffset;
         return new int3(
             Mathf.FloorToInt(localPosition.x),
             Mathf.FloorToInt(localPosition.y),
@@ -145,7 +146,12 @@ public class CellInteractionController : MonoBehaviour
     {
         ClearHighlight();
 
-        Vector3 worldPosition = gridWorldPosition + gridOffset + new Vector3(position.x + 0.5f, position.y + 0.5f, position.z + 0.5f);
+        Vector3 worldPosition = gridOffset + new Vector3(
+            position.x,
+            position.y,
+            position.z
+        );
+
         highlightedCell = GameObject.CreatePrimitive(PrimitiveType.Cube);
         highlightedCell.transform.position = worldPosition;
         highlightedCell.transform.localScale = Vector3.one * 0.9f;
@@ -185,7 +191,14 @@ public class CellInteractionController : MonoBehaviour
         if (highlightedCell != null)
         {
             int3 cellPosition = WorldToCellPosition(highlightedCell.transform.position);
-            grid.SetAlive(cellPosition);
+
+            cellPosition = new int3(
+                Mathf.Clamp(cellPosition.x, 0, GameManager.Instance.gridSize - 1),
+                Mathf.Clamp(cellPosition.y, 0, GameManager.Instance.gridSize - 1),
+                Mathf.Clamp(cellPosition.z, 0, GameManager.Instance.gridSize - 1)
+            );
+
+            GameManager.Instance.CreateCell(cellPosition);
             Debug.Log($"Placing cell at position: {cellPosition}");
         }
     }
@@ -195,7 +208,7 @@ public class CellInteractionController : MonoBehaviour
         if (highlightedCell != null)
         {
             int3 cellPosition = WorldToCellPosition(highlightedCell.transform.position);
-            grid.RemoveCell(cellPosition);
+            GameManager.Instance.DestroyCell(cellPosition);
             Debug.Log($"Removing cell at position: {cellPosition}");
         }
     }

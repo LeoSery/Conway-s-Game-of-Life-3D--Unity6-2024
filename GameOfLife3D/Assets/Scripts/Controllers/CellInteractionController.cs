@@ -13,6 +13,8 @@ public class CellInteractionController : MonoBehaviour
     private Vector3 gridWorldPosition;
     private Vector3 gridOffset;
 
+    private Vector3Int? lastHighlightedCell;
+
     private void Start()
     {
         mainCamera = Camera.main;
@@ -38,7 +40,7 @@ public class CellInteractionController : MonoBehaviour
         grid = GameManager.Instance.Grid;
         visualGrid = GameManager.Instance.visualGrid;
         gridWorldPosition = visualGrid.transform.position;
-        gridOffset = new Vector3(-5f, -5f, 0f); // Ajustement pour le décalage observé
+        gridOffset = new Vector3(-5f, -5f, 0f);
         Debug.Log($"Grid reference obtained successfully. Grid world position: {gridWorldPosition}, Grid offset: {gridOffset}");
 
         if (InputManager.Instance != null)
@@ -51,44 +53,41 @@ public class CellInteractionController : MonoBehaviour
         }
     }
 
-    private void Update()
-    {
-        if (grid != null)
-        {
-            UpdateCellHighlight();
-        }
-    }
-
     private void UpdateCellHighlight()
     {
         Ray ray = mainCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0));
-        int3? targetCell = FindTargetCell(ray);
+        Vector3Int? targetCell = FindTargetCell(ray);
 
-        if (targetCell.HasValue)
+        if (targetCell.HasValue && !targetCell.Equals(lastHighlightedCell))
         {
-            HighlightCell(targetCell.Value);
+            if (lastHighlightedCell.HasValue)
+            {
+                visualGrid.UnhighlightCell();
+            }
+            visualGrid.HighlightCell(targetCell.Value);
+            lastHighlightedCell = targetCell;
             Debug.Log($"Highlighting cell at position: {targetCell.Value}");
         }
-        else
+        else if (!targetCell.HasValue && lastHighlightedCell.HasValue)
         {
-            ClearHighlight();
+            visualGrid.UnhighlightCell();
+            lastHighlightedCell = null;
         }
     }
 
-    private int3? FindTargetCell(Ray ray)
+    private Vector3Int? FindTargetCell(Ray _ray)
     {
         Vector3 gridMin = gridOffset;
-        Vector3 gridMax = -gridOffset; // Utiliser l'opposé du gridOffset pour le max
+        Vector3 gridMax = -gridOffset;
 
-        float tMin, tMax;
-        if (!IntersectRayBox(ray, gridMin, gridMax, out tMin, out tMax))
+        if (!IntersectRayBox(_ray, gridMin, gridMax, out float tMin, out float tMax))
         {
-            return null; // Le rayon ne traverse pas la grille
+            return null;
         }
 
-        Vector3 entryPoint = ray.GetPoint(tMin);
+        Vector3 entryPoint = _ray.GetPoint(tMin);
         Vector3 currentPoint = entryPoint;
-        Vector3 step = ray.direction * 0.1f; // Petit pas pour avancer le long du rayon
+        Vector3 step = _ray.direction * 0.1f;
 
         while (IsInsideGrid(currentPoint))
         {
@@ -96,7 +95,7 @@ public class CellInteractionController : MonoBehaviour
 
             if (IsValidCell(cellPosition))
             {
-                return cellPosition;
+                return new Vector3Int(cellPosition.x, cellPosition.y, cellPosition.z);
             }
 
             currentPoint += step;
@@ -105,29 +104,29 @@ public class CellInteractionController : MonoBehaviour
         return null;
     }
 
-    private bool IntersectRayBox(Ray ray, Vector3 boxMin, Vector3 boxMax, out float tMin, out float tMax)
+    private bool IntersectRayBox(Ray _ray, Vector3 _boxMin, Vector3 _boxMax, out float _tMin, out float _tMax)
     {
-        Vector3 invDir = new Vector3(1f / ray.direction.x, 1f / ray.direction.y, 1f / ray.direction.z);
-        Vector3 t1 = Vector3.Scale((boxMin - ray.origin), invDir);
-        Vector3 t2 = Vector3.Scale((boxMax - ray.origin), invDir);
+        Vector3 invDir = new Vector3(1f / _ray.direction.x, 1f / _ray.direction.y, 1f / _ray.direction.z);
+        Vector3 t1 = Vector3.Scale((_boxMin - _ray.origin), invDir);
+        Vector3 t2 = Vector3.Scale((_boxMax - _ray.origin), invDir);
 
-        tMin = Mathf.Max(Mathf.Max(Mathf.Min(t1.x, t2.x), Mathf.Min(t1.y, t2.y)), Mathf.Min(t1.z, t2.z));
-        tMax = Mathf.Min(Mathf.Min(Mathf.Max(t1.x, t2.x), Mathf.Max(t1.y, t2.y)), Mathf.Max(t1.z, t2.z));
+        _tMin = Mathf.Max(Mathf.Max(Mathf.Min(t1.x, t2.x), Mathf.Min(t1.y, t2.y)), Mathf.Min(t1.z, t2.z));
+        _tMax = Mathf.Min(Mathf.Min(Mathf.Max(t1.x, t2.x), Mathf.Max(t1.y, t2.y)), Mathf.Max(t1.z, t2.z));
 
-        return tMax >= tMin && tMax >= 0;
+        return _tMax >= _tMin && _tMax >= 0;
     }
 
-    private bool IsInsideGrid(Vector3 point)
+    private bool IsInsideGrid(Vector3 _point)
     {
-        Vector3 localPoint = point - (gridWorldPosition + gridOffset);
+        Vector3 localPoint = _point - (gridWorldPosition + gridOffset);
         return localPoint.x >= 0 && localPoint.x < grid.GridSize &&
                localPoint.y >= 0 && localPoint.y < grid.GridSize &&
                localPoint.z >= 0 && localPoint.z < grid.GridSize;
     }
 
-    private int3 WorldToCellPosition(Vector3 worldPosition)
+    private int3 WorldToCellPosition(Vector3 _worldPosition)
     {
-        Vector3 localPosition = worldPosition - gridOffset;
+        Vector3 localPosition = _worldPosition - gridOffset;
         return new int3(
             Mathf.FloorToInt(localPosition.x),
             Mathf.FloorToInt(localPosition.y),
@@ -135,21 +134,21 @@ public class CellInteractionController : MonoBehaviour
         );
     }
 
-    private bool IsValidCell(int3 cellPosition)
+    private bool IsValidCell(int3 _cellPosition)
     {
-        return cellPosition.x >= 0 && cellPosition.x < grid.GridSize &&
-               cellPosition.y >= 0 && cellPosition.y < grid.GridSize &&
-               cellPosition.z >= 0 && cellPosition.z < grid.GridSize;
+        return _cellPosition.x >= 0 && _cellPosition.x < grid.GridSize &&
+               _cellPosition.y >= 0 && _cellPosition.y < grid.GridSize &&
+               _cellPosition.z >= 0 && _cellPosition.z < grid.GridSize;
     }
 
-    private void HighlightCell(int3 position)
+    private void HighlightCell(int3 _position)
     {
         ClearHighlight();
 
         Vector3 worldPosition = gridOffset + new Vector3(
-            position.x,
-            position.y,
-            position.z
+            _position.x,
+            _position.y,
+            _position.z
         );
 
         highlightedCell = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -160,7 +159,7 @@ public class CellInteractionController : MonoBehaviour
         renderer.material.color = highlightColor;
         renderer.material.SetInt("_ZTest", (int)UnityEngine.Rendering.CompareFunction.Always);
 
-        Debug.Log($"Created highlight cube at world position: {highlightedCell.transform.position}, Grid position: {position}");
+        Debug.Log($"Created highlight cube at world position: {highlightedCell.transform.position}, Grid position: {_position}");
     }
 
     private void ClearHighlight()
@@ -173,8 +172,14 @@ public class CellInteractionController : MonoBehaviour
 
     private void SubscribeToEvents()
     {
-        InputManager.Instance.OnPlaceCell += PlaceCell;
-        InputManager.Instance.OnRemoveCell += RemoveCell;
+        if (InputManager.Instance != null)
+        {
+            InputManager.Instance.OnPlaceCell += PlaceCell;
+            InputManager.Instance.OnRemoveCell += RemoveCell;
+
+            InputManager.Instance.OnMove += HandleMovement;
+            InputManager.Instance.OnMouseLook += HandleMouseLook;
+        }
     }
 
     private void OnDisable()
@@ -183,7 +188,20 @@ public class CellInteractionController : MonoBehaviour
         {
             InputManager.Instance.OnPlaceCell -= PlaceCell;
             InputManager.Instance.OnRemoveCell -= RemoveCell;
+
+            InputManager.Instance.OnMove -= HandleMovement;
+            InputManager.Instance.OnMouseLook -= HandleMouseLook;
         }
+    }
+
+    private void HandleMovement(Vector3 _movement)
+    {
+        UpdateCellHighlight();
+    }
+
+    private void HandleMouseLook(Vector2 _mouseDelta)
+    {
+        UpdateCellHighlight();
     }
 
     private void PlaceCell()

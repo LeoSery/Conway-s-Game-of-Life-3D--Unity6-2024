@@ -39,7 +39,10 @@ public class GameManager : MonoBehaviour
     [Header("Prefabs :")]
     public GameObject cellPrefab;
     public Transform cellContainer;
+
+    [Header("Scripts :")]
     public VisualGrid visualGrid;
+    public CellInteractionController cellInteractionController;
 
     public Grid Grid { get; private set; }
     public bool IsPaused => isPaused;
@@ -89,13 +92,13 @@ public class GameManager : MonoBehaviour
         cellObjects = new Dictionary<int3, GameObject>();
 
         // Example: Create a simple pattern
-        //Grid.SetAlive(new int3(4, 4, 4));
-        //Grid.SetAlive(new int3(4, 4, 5));
-        //Grid.SetAlive(new int3(4, 5, 4));
-        //Grid.SetAlive(new int3(5, 4, 4));
-        //Grid.SetAlive(new int3(5, 5, 5));
-        //Grid.SetAlive(new int3(3, 4, 4));
-        //Grid.SetAlive(new int3(4, 3, 4));
+        Grid.SetAlive(new int3(4, 4, 4));
+        Grid.SetAlive(new int3(4, 4, 5));
+        Grid.SetAlive(new int3(4, 5, 4));
+        Grid.SetAlive(new int3(5, 4, 4));
+        Grid.SetAlive(new int3(5, 5, 5));
+        Grid.SetAlive(new int3(3, 4, 4));
+        Grid.SetAlive(new int3(4, 3, 4));
 
         // Render initial cells
         foreach (var cell in Grid.GetActiveCells())

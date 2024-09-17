@@ -20,6 +20,11 @@ public class UIManager : MonoBehaviour
     public TextMeshProUGUI gridSizeText;
     public TextMeshProUGUI cycleSpeedText;
 
+    [Header("Layer Panel :")]
+    public GameObject layerPanel;
+    public Button LayerUpButton;
+    public Button LayerDownButton;
+
     [Header("Stats Panel :")]
     public TextMeshProUGUI cycleText;
     public TextMeshProUGUI aliveCellsText;
@@ -30,6 +35,8 @@ public class UIManager : MonoBehaviour
 
     private StatManager statManager;
     private GameManager gameManager;
+
+    private CellInteractionController cellInteractionController;
 
     private void OnEnable()
     {
@@ -60,11 +67,13 @@ public class UIManager : MonoBehaviour
     {
         statManager = StatManager.Instance;
         gameManager = GameManager.Instance;
+        
+        cellInteractionController = gameManager.cellInteractionController;
 
         SetupButtonListeners();
         SetupConfigPanel();
 
-        UpdateConfigPanelVisibility(gameManager.IsPaused);
+        UpdateEditPanelsVisibility(gameManager.IsPaused);
         UpdateStateButtonVisibility(gameManager.IsPaused);
     }
 
@@ -95,6 +104,8 @@ public class UIManager : MonoBehaviour
         AssignButtonToAction(PauseButton, gameManager.TogglePause);
         AssignButtonToAction(PlayButton, gameManager.TogglePause);
         AssignButtonToAction(ResetButton, gameManager.ResetGrid);
+        AssignButtonToAction(LayerUpButton, gameManager.cellInteractionController.ShowLayer);
+        AssignButtonToAction(LayerDownButton, gameManager.cellInteractionController.HideLayer);
     }
 
     private void AssignButtonToAction(Button _button, UnityAction _action)
@@ -130,7 +141,7 @@ public class UIManager : MonoBehaviour
     private void OnPauseStateChanged(bool _isPaused)
     {
         UpdateStateButtonVisibility(_isPaused);
-        UpdateConfigPanelVisibility(_isPaused);
+        UpdateEditPanelsVisibility(_isPaused);
         UpdateStateText(_isPaused);
     }
 
@@ -144,11 +155,12 @@ public class UIManager : MonoBehaviour
         cycleSpeedText.text = $"{_speed:F2}";
     }
 
-    private void UpdateConfigPanelVisibility(bool _isPaused)
+    private void UpdateEditPanelsVisibility(bool _isPaused)
     {
         if (configPanel != null)
         {
             configPanel.SetActive(_isPaused);
+            layerPanel.SetActive(_isPaused);
         }
     }
 

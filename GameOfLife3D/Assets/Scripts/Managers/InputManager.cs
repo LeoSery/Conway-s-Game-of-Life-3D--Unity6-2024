@@ -10,9 +10,14 @@ public class InputManager : MonoBehaviour
 
     public event Action<Vector2> OnMouseLook;
     public event Action<Vector3> OnMove;
+
     public event Action OnPlaceCell;
     public event Action OnRemoveCell;
+
     public event Action<bool> OnFocusChanged;
+
+    public event Action OnShowLayer;
+    public event Action OnHideLayer;
 
     private bool ignoreNextMouseMovement = false;
     private bool isFocused = false;
@@ -49,7 +54,7 @@ public class InputManager : MonoBehaviour
             ToggleFocus();
         }
 
-        if (!isFocused && Input.GetMouseButtonDown(0)) // Left click
+        if (!isFocused && Input.GetMouseButtonDown(0))
         {
             CheckForUIClick();
         }
@@ -66,6 +71,15 @@ public class InputManager : MonoBehaviour
             }
             HandleMovement();
             HandleCellInteraction();
+        }
+
+        if (Input.GetKeyDown(KeyCode.LeftShift))
+        {
+            OnShowLayer?.Invoke();
+        }
+        else if (Input.GetKeyDown(KeyCode.LeftControl))
+        {
+            OnHideLayer?.Invoke();
         }
     }
 

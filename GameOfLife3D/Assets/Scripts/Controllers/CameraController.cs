@@ -36,9 +36,6 @@ public class CameraController : MonoBehaviour
             horizontalRotation = rotation.y;
             verticalRotation = rotation.x;
         }
-
-        Debug.LogWarning($"Camera position: {mainCamera.transform.position}, rotation: {mainCamera.transform.rotation.eulerAngles}");
-
     }
 
     private void OnDisable()

@@ -12,8 +12,12 @@ public class VisualGrid : MonoBehaviour
     private int gridSize;
     private float cellSize;
     private Vector3 gridOffset;
+
     private readonly List<LineRenderer> gridLines = new();
     private readonly List<LineRenderer> highlightLines = new();
+    private readonly List<List<LineRenderer>> layerLines = new();
+    private readonly List<LineRenderer> verticalLines = new();
+    public int VisibleLayers { get; private set; }
 
     public void Initialize(int _size, float _cellSize)
     {
@@ -21,38 +25,44 @@ public class VisualGrid : MonoBehaviour
         cellSize = _cellSize;
         CreateGrid();
         CreateHighlightLines();
+
+        
     }
 
     private void CreateGrid()
     {
         ClearExistingLines(gridLines);
+        layerLines.Clear();
+        verticalLines.Clear();
+
         gridOffset = new Vector3(gridSize / 2f, gridSize / 2f, gridSize / 2f) * cellSize;
 
-        for (int i = 0; i <= gridSize; i++)
+        for (int y = 0; y <= gridSize; y++)
         {
-            float pos = i * cellSize;
+            List<LineRenderer> currentLayerLines = new();
 
-            // X direction
-            for (int x = 0; x <= gridSize; x++)
+            for (int i = 0; i <= gridSize; i++)
             {
-                CreateGridLine(new Vector3(0, x * cellSize, pos) - gridOffset,
-                               new Vector3(gridSize * cellSize, x * cellSize, pos) - gridOffset);
+                float pos = i * cellSize;
+
+                // X direction
+                currentLayerLines.Add(CreateGridLine(new Vector3(0, y * cellSize, pos) - gridOffset,
+                                       new Vector3(gridSize * cellSize, y * cellSize, pos) - gridOffset));
+
+                // Y direction
+                verticalLines.Add(CreateGridLine(new Vector3(y * cellSize, 0, i * cellSize) - gridOffset,
+                   new Vector3(y * cellSize, gridSize * cellSize, i * cellSize) - gridOffset));
+
+                // Z direction
+                currentLayerLines.Add(CreateGridLine(new Vector3(pos, y * cellSize, 0) - gridOffset,
+                                       new Vector3(pos, y * cellSize, gridSize * cellSize) - gridOffset));
             }
 
-            // Y direction
-            for (int y = 0; y <= gridSize; y++)
-            {
-                CreateGridLine(new Vector3(y * cellSize, 0, pos) - gridOffset,
-                               new Vector3(y * cellSize, gridSize * cellSize, pos) - gridOffset);
-            }
-
-            // Z direction
-            for (int z = 0; z <= gridSize; z++)
-            {
-                CreateGridLine(new Vector3(pos, z * cellSize, 0) - gridOffset,
-                               new Vector3(pos, z * cellSize, gridSize * cellSize) - gridOffset);
-            }
+            layerLines.Add(currentLayerLines);
         }
+
+        VisibleLayers = gridSize + 1;
+        UpdateVisibleLayers();
     }
 
     private void CreateHighlightLines()
@@ -66,15 +76,15 @@ public class VisualGrid : MonoBehaviour
         }
     }
 
-    private void CreateGridLine(Vector3 _start, Vector3 _end)
+    private LineRenderer CreateGridLine(Vector3 _start, Vector3 _end)
     {
-        CreateLine(_start, _end, gridColor, gridLineWidth, gridLines);
+        return CreateLine(_start, _end, gridColor, gridLineWidth, gridLines);
     }
 
     private LineRenderer CreateLine(Vector3 _start, Vector3 _end, Color _color, float _width, List<LineRenderer> _lineList = null)
     {
         GameObject lineObj = new("GridLine");
-        lineObj.transform.SetParent(this.transform);
+        lineObj.transform.SetParent(transform);
         LineRenderer lr = lineObj.AddComponent<LineRenderer>();
 
         lr.material = new Material(Shader.Find("Sprites/Default"));
@@ -97,12 +107,12 @@ public class VisualGrid : MonoBehaviour
         Vector3[] positions = new Vector3[]
         {
             start,
-            new Vector3(end.x, start.y, start.z),
-            new Vector3(start.x, end.y, start.z),
-            new Vector3(start.x, start.y, end.z),
-            new Vector3(end.x, end.y, start.z),
-            new Vector3(end.x, start.y, end.z),
-            new Vector3(start.x, end.y, end.z),
+            new(end.x, start.y, start.z),
+            new(start.x, end.y, start.z),
+            new(start.x, start.y, end.z),
+            new(end.x, end.y, start.z),
+            new(end.x, start.y, end.z),
+            new(start.x, end.y, end.z),
             end
         };
 
@@ -146,8 +156,53 @@ public class VisualGrid : MonoBehaviour
     private static readonly int[,] CubeEdges = new int[,]
     {
         {0, 1}, {1, 4}, {4, 2},
-        {2, 0}, {0, 3}, {1, 5}, 
+        {2, 0}, {0, 3}, {1, 5},
         {4, 7}, {2, 6}, {3, 5},
-        {5, 7}, {7, 6}, {6, 3} 
+        {5, 7}, {7, 6}, {6, 3}
     };
+
+    public void ShowLayer()
+    {
+        if (VisibleLayers < gridSize + 1)
+        {
+            VisibleLayers++;
+            UpdateVisibleLayers();
+        }
+    }
+
+    public void HideLayer()
+    {
+        if (VisibleLayers > 2)
+        {
+            VisibleLayers--;
+            UpdateVisibleLayers();
+        }
+    }
+
+    private void UpdateVisibleLayers()
+    {
+        for (int y = 0; y < layerLines.Count; y++)
+        {
+            bool isVisible = y < VisibleLayers;
+
+            foreach (var line in layerLines[y])
+            {
+                line.gameObject.SetActive(isVisible);
+            }
+        }
+
+        float visibleHeight = (VisibleLayers  - 1) * cellSize;
+
+        foreach (var line in verticalLines)
+        {
+            Vector3 startPos = line.GetPosition(0);
+            Vector3 endPos = line.GetPosition(1);
+
+            endPos.y = gridSize * cellSize - gridOffset.y;
+            endPos.y = Mathf.Min(endPos.y, visibleHeight - gridOffset.y);
+
+            line.SetPosition(0, startPos);
+            line.SetPosition(1, endPos);
+        }
+    }
 }

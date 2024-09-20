@@ -67,11 +67,7 @@ public class CellInteractionController : MonoBehaviour
         {
             if (!targetCell.Equals(lastHighlightedCell))
             {
-                if (lastHighlightedCell.HasValue)
-                {
-                    visualGrid.UnhighlightCell();
-                }
-
+                visualGrid.UnhighlightCell();
                 visualGrid.HighlightCell(targetCell.Value);
                 lastHighlightedCell = targetCell;
             }
@@ -124,7 +120,6 @@ public class CellInteractionController : MonoBehaviour
                 }
             }
         }
-
         return null;
     }
 
@@ -199,26 +194,19 @@ public class CellInteractionController : MonoBehaviour
 
     private void PlaceCell()
     {
-        if (highlightedCell != null)
+        if (lastHighlightedCell.HasValue)
         {
-            int3 cellPosition = WorldToCellPosition(highlightedCell.transform.position);
-
-            cellPosition = new int3(
-                Mathf.Clamp(cellPosition.x, 0, GameManager.Instance.gridSize - 1),
-                Mathf.Clamp(cellPosition.y, 0, GameManager.Instance.gridSize - 1),
-                Mathf.Clamp(cellPosition.z, 0, GameManager.Instance.gridSize - 1)
-            );
-
-            GameManager.Instance.CreateCell(cellPosition);
+            Vector3Int cellPosition = lastHighlightedCell.Value;
+            GameManager.Instance.CreateCell(new int3(cellPosition.x, cellPosition.y, cellPosition.z));
         }
     }
 
     private void RemoveCell()
     {
-        if (highlightedCell != null)
+        if (lastHighlightedCell.HasValue)
         {
-            int3 cellPosition = WorldToCellPosition(highlightedCell.transform.position);
-            GameManager.Instance.DestroyCell(cellPosition);
+            Vector3Int cellPosition = lastHighlightedCell.Value;
+            GameManager.Instance.DestroyCell(new int3(cellPosition.x, cellPosition.y, cellPosition.z));
         }
     }
 

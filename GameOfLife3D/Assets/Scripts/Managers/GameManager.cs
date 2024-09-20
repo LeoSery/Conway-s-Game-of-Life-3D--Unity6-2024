@@ -197,11 +197,6 @@ public class GameManager : MonoBehaviour
         {
             Grid.SetAlive(position);
             CreateCellObject(position);
-            Debug.Log($"Cell created at position: {position}");
-        }
-        else
-        {
-            Debug.Log($"Cell already exists at position: {position}");
         }
     }
 
@@ -211,11 +206,6 @@ public class GameManager : MonoBehaviour
         {
             Grid.RemoveCell(position);
             DestroyCellObject(position);
-            Debug.Log($"Cell destroyed at position: {position}");
-        }
-        else
-        {
-            Debug.Log($"No cell exists at position: {position}");
         }
     }
 
@@ -231,7 +221,6 @@ public class GameManager : MonoBehaviour
 
             GameObject cellObject = Instantiate(cellPrefab, worldPosition, Quaternion.identity, cellContainer);
             cellObjects[position] = cellObject;
-            Debug.Log($"Cell object created at position: {position}, World position: {worldPosition}");
         }
     }
 

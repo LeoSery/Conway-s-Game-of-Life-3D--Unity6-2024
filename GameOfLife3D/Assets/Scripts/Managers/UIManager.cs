@@ -37,6 +37,7 @@ public class UIManager : MonoBehaviour
     private GameManager gameManager;
 
     private CellInteractionController cellInteractionController;
+    private CameraController cameraController;
 
     private void OnEnable()
     {
@@ -69,6 +70,7 @@ public class UIManager : MonoBehaviour
         gameManager = GameManager.Instance;
         
         cellInteractionController = gameManager.cellInteractionController;
+        cameraController = gameManager.CameraController;
 
         SetupButtonListeners();
         SetupConfigPanel();
@@ -125,6 +127,7 @@ public class UIManager : MonoBehaviour
         int newSize = Mathf.RoundToInt(_value);
         UpdateGridSizeText(newSize);
         gameManager.ResizeGrid(newSize);
+        cameraController.UpdateGridInfo();
     }
 
     private void OnCycleSpeedChanged(float _value)

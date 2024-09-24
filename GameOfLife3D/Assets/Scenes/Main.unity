@@ -298,6 +298,7 @@ MonoBehaviour:
   cellContainer: {fileID: 630475823}
   visualGrid: {fileID: 566697671}
   cellInteractionController: {fileID: 463742764}
+  CameraController: {fileID: 463742763}
 --- !u!4 &255847791
 Transform:
   m_ObjectHideFlags: 0
@@ -928,6 +929,7 @@ MonoBehaviour:
   mouseVerticalSensitivity: 4
   horizontalMoveSpeed: 5
   verticalMoveSpeed: 5
+  additionalDistanceFromGrid: 15
 --- !u!114 &463742764
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1804,7 +1806,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: 'Conway''s Game of life 3D - V0.10 - GitHub : @LeoSery'
+  m_text: 'Conway''s Game of life 3D - V0.12 - GitHub : @LeoSery'
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}

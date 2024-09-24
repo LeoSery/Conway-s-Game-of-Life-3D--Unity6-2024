@@ -43,6 +43,7 @@ public class GameManager : MonoBehaviour
     [Header("Scripts :")]
     public VisualGrid visualGrid;
     public CellInteractionController cellInteractionController;
+    public CameraController CameraController;
 
     public Grid Grid { get; private set; }
     public bool IsPaused => isPaused;

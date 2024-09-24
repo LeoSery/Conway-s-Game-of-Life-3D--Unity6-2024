@@ -9,10 +9,14 @@ public class CameraController : MonoBehaviour
     [Header("Movement Speed")]
     public float horizontalMoveSpeed = 5f;
     public float verticalMoveSpeed = 5f;
+    [Header("Movement Limits")]
+    public float additionalDistanceFromGrid = 5f;
 
     private float horizontalRotation = 0f;
     private float verticalRotation = 0f;
     private bool isActive = true;
+    private Vector3 gridCenter;
+    private float maxDistanceFromCenter;
 
     private void Start()
     {
@@ -36,6 +40,13 @@ public class CameraController : MonoBehaviour
             horizontalRotation = rotation.y;
             verticalRotation = rotation.x;
         }
+
+        UpdateGridInfo();
+    }
+
+    public void UpdateGridInfo()
+    {
+        maxDistanceFromCenter = (GameManager.Instance.gridSize / 2f) + additionalDistanceFromGrid;
     }
 
     private void OnDisable()
@@ -73,8 +84,32 @@ public class CameraController : MonoBehaviour
 
         Vector3 horizontalMove = horizontalMoveSpeed * movement.x * mainCamera.transform.right;
         Vector3 verticalMove = movement.z * verticalMoveSpeed * mainCamera.transform.forward;
-        Vector3 finalMove = (horizontalMove + verticalMove) * Time.deltaTime;
+        Vector3 targetPosition = (horizontalMove + verticalMove) * Time.deltaTime;
 
-        mainCamera.transform.position += finalMove;
+        Vector3 finalPositon = mainCamera.transform.position + targetPosition;
+
+        if (IsWithinBounds(finalPositon))
+        {
+            mainCamera.transform.position = finalPositon;
+        }
+        else
+        {
+            mainCamera.transform.position = GetClosestValidPosition(finalPositon);
+        }
+    }
+
+    private bool IsWithinBounds(Vector3 position)
+    {
+        return position.magnitude <= maxDistanceFromCenter;
+    }
+
+    private Vector3 GetClosestValidPosition(Vector3 position)
+    {
+        return position.normalized * maxDistanceFromCenter;
+    }
+
+    public void OnGridSizeChanged()
+    {
+        UpdateGridInfo();
     }
 }

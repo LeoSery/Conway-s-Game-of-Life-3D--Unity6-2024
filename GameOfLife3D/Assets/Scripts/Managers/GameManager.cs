@@ -50,7 +50,7 @@ public class GameManager : MonoBehaviour
 
     private Dictionary<int3, GameObject> cellObjects;
     private float lastUpdateTime;
-    private int cellSize = 1;
+    private readonly int cellSize = 1;
     private bool isPaused = true;
 
     private void Awake()

@@ -1,58 +1,57 @@
 using System.Collections.Generic;
 using System.Linq;
 
-using UnityEngine;
-
 using Unity.Mathematics;
+
+using UnityEngine;
 
 public class GameManager : MonoBehaviour
 {
+    #region Static Members and Events
     public static GameManager Instance { get; private set; }
 
     public delegate void CycleCompleteHandler();
     public static event CycleCompleteHandler OnCycleComplete;
 
-    public delegate void PauseStateChangedHandler(bool isPaused);
+    public delegate void PauseStateChangedHandler(bool _isPaused);
     public static event PauseStateChangedHandler OnPauseStateChanged;
+    #endregion
 
-    [Header("Simulation Settings :")]
-    [SerializeField, Range(0.1f, 10f)]
-    private float updateInterval = 1f;
+    #region Fields and Properties
+    [Header("Simulation Settings")]
+    [SerializeField] private float updateInterval = 1f;
     public int gridSize = 10;
 
-    [Header("Simulation Limits :")]
+    [Header("Simulation Limits")]
     public int minGridSize = 5;
     public int maxGridSize = 50;
-    [Space(10)]
     public float minCycleSpeed = 0.1f;
     public float maxCycleSpeed = 10f;
 
-    public float UpdateInterval
-    {
-        get => updateInterval;
-        set
-        {
-            updateInterval = Mathf.Clamp(value, minCycleSpeed, maxCycleSpeed);
-        }
-    }
+    [Header("Prefabs")]
+    [SerializeField] private GameObject cellPrefab;
+    [SerializeField] private Transform cellContainer;
 
-    [Header("Prefabs :")]
-    public GameObject cellPrefab;
-    public Transform cellContainer;
-
-    [Header("Scripts :")]
+    [Header("Scripts")]
     public VisualGrid visualGrid;
     public CellInteractionController cellInteractionController;
     public CameraController CameraController;
 
-    public Grid Grid { get; private set; }
-    public bool IsPaused => isPaused;
-
     private Dictionary<int3, GameObject> cellObjects;
     private float lastUpdateTime;
-    private readonly int cellSize = 1;
+    private const int CELL_SIZE = 1;
     private bool isPaused = true;
 
+    public float UpdateInterval
+    {
+        get => updateInterval;
+        set => updateInterval = Mathf.Clamp(value, minCycleSpeed, maxCycleSpeed);
+    }
+    public Grid Grid { get; private set; }
+    public bool IsPaused => isPaused;
+    #endregion
+
+    #region Unity Lifecycle Methods
     private void Awake()
     {
         if (Instance == null)
@@ -71,10 +70,9 @@ public class GameManager : MonoBehaviour
     {
         if (visualGrid != null)
         {
-            visualGrid.Initialize(gridSize, cellSize);
+            visualGrid.Initialize(gridSize, CELL_SIZE);
         }
 
-        // Initialiser les stats après que tous les managers sont initialisés
         InitializeStats();
     }
 
@@ -86,20 +84,95 @@ public class GameManager : MonoBehaviour
             lastUpdateTime = Time.time;
         }
     }
+    #endregion
 
+    #region Public Methods
+    public void ResizeGrid(int _newSize)
+    {
+        gridSize = _newSize;
+        Grid.Resize(_newSize);
+
+        if (visualGrid != null)
+        {
+            visualGrid.UpdateGridSize(gridSize, CELL_SIZE);
+        }
+
+        ResetGrid();
+        StatManager.Instance.UpdateTotalCells();
+    }
+
+    public void CreateCell(int3 _position)
+    {
+        if (!Grid.IsAlive(_position))
+        {
+            Grid.SetAlive(_position);
+            CreateCellObject(_position);
+        }
+    }
+
+    public void DestroyCell(int3 _position)
+    {
+        if (Grid.IsAlive(_position))
+        {
+            Grid.RemoveCell(_position);
+            DestroyCellObject(_position);
+        }
+    }
+
+    public void TogglePause()
+    {
+        isPaused = !isPaused;
+        StatManager.Instance.SetPaused(isPaused);
+        OnPauseStateChanged?.Invoke(isPaused);
+        Debug.Log(isPaused ? "Game Paused" : "Game Resumed");
+    }
+
+    public void ResetGrid()
+    {
+        // Destroy all existing cell objects
+        foreach (var cellObject in cellObjects.Values)
+        {
+            Destroy(cellObject);
+        }
+
+        cellObjects.Clear();
+
+        // Reset the grid
+        Grid = new Grid(gridSize);
+        InitializeGrid();
+
+        StatManager.Instance.ResetStats();
+        StatManager.Instance.SetPaused(true);
+        Debug.Log("Grid and Stats Reset");
+    }
+
+    public void IncreaseSpeed()
+    {
+        UpdateInterval -= 0.1f;
+        Debug.Log($"Speed Increased. New interval: {UpdateInterval}");
+    }
+
+    public void DecreaseSpeed()
+    {
+        UpdateInterval += 0.1f;
+        Debug.Log($"Speed Decreased. New interval: {UpdateInterval}");
+    }
+    #endregion
+
+    #region Private Methods
     private void InitializeGrid()
     {
         Grid = new Grid(gridSize);
         cellObjects = new Dictionary<int3, GameObject>();
 
         // Example: Create a simple pattern
-        Grid.SetAlive(new int3(4, 4, 4));
-        Grid.SetAlive(new int3(4, 4, 5));
-        Grid.SetAlive(new int3(4, 5, 4));
-        Grid.SetAlive(new int3(5, 4, 4));
-        Grid.SetAlive(new int3(5, 5, 5));
-        Grid.SetAlive(new int3(3, 4, 4));
-        Grid.SetAlive(new int3(4, 3, 4));
+        //Grid.SetAlive(new int3(4, 4, 4));
+        //Grid.SetAlive(new int3(4, 4, 5));
+        //Grid.SetAlive(new int3(4, 5, 4));
+        //Grid.SetAlive(new int3(5, 4, 4));
+        //Grid.SetAlive(new int3(5, 5, 5));
+        //Grid.SetAlive(new int3(3, 4, 4));
+        //Grid.SetAlive(new int3(4, 3, 4));
 
         // Render initial cells
         foreach (var cell in Grid.GetActiveCells())
@@ -123,19 +196,6 @@ public class GameManager : MonoBehaviour
         {
             Debug.LogError("StatManager instance is null when trying to initialize stats.");
         }
-    }
-
-    public void ResizeGrid(int newSize)
-    {
-        gridSize = newSize;
-        Grid.Resize(newSize);
-
-        if (visualGrid != null)
-        {
-            visualGrid.UpdateGridSize(gridSize, cellSize);
-        }
-        ResetGrid();
-        StatManager.Instance.UpdateTotalCells();
     }
 
     private void UpdateGrid()
@@ -178,98 +238,42 @@ public class GameManager : MonoBehaviour
         OnCycleComplete?.Invoke();
     }
 
-    private byte DetermineNewState(byte currentState, int aliveNeighbors)
+    private byte DetermineNewState(byte _currentState, int _aliveNeighbors)
     {
-        if (currentState == CellState.Alive)
+        if (_currentState == CellState.Alive)
         {
             // A living cell survives if it has 4, 5 or 6 living neighbors
-            return (byte)((aliveNeighbors >= 4 && aliveNeighbors <= 6) ? CellState.Alive : CellState.Dead);
+            return (byte)((_aliveNeighbors >= 4 && _aliveNeighbors <= 6) ? CellState.Alive : CellState.Dead);
         }
         else
         {
             // A dead cell is born if it has exactly 4 living neighbors.
-            return (byte)(aliveNeighbors == 4 ? CellState.Alive : CellState.Dead);
+            return (byte)(_aliveNeighbors == 4 ? CellState.Alive : CellState.Dead);
         }
     }
 
-    public void CreateCell(int3 position)
+    private void CreateCellObject(int3 _position)
     {
-        if (!Grid.IsAlive(position))
-        {
-            Grid.SetAlive(position);
-            CreateCellObject(position);
-        }
-    }
-
-    public void DestroyCell(int3 position)
-    {
-        if (Grid.IsAlive(position))
-        {
-            Grid.RemoveCell(position);
-            DestroyCellObject(position);
-        }
-    }
-
-    private void CreateCellObject(int3 position)
-    {
-        if (!cellObjects.ContainsKey(position))
+        if (!cellObjects.ContainsKey(_position))
         {
             Vector3 worldPosition = new Vector3(
-                position.x - (gridSize - 1) / 2f,
-                position.y - (gridSize - 1) / 2f,
-                position.z - (gridSize - 1) / 2f
-            ) * cellSize;
+                _position.x - (gridSize - 1) / 2f,
+                _position.y - (gridSize - 1) / 2f,
+                _position.z - (gridSize - 1) / 2f
+            ) * CELL_SIZE;
 
             GameObject cellObject = Instantiate(cellPrefab, worldPosition, Quaternion.identity, cellContainer);
-            cellObjects[position] = cellObject;
+            cellObjects[_position] = cellObject;
         }
     }
 
-    private void DestroyCellObject(int3 position)
+    private void DestroyCellObject(int3 _position)
     {
-        if (cellObjects.TryGetValue(position, out GameObject cellObject))
+        if (cellObjects.TryGetValue(_position, out GameObject cellObject))
         {
             Destroy(cellObject);
-            cellObjects.Remove(position);
+            cellObjects.Remove(_position);
         }
     }
-
-    public void TogglePause()
-    {
-        isPaused = !isPaused;
-        StatManager.Instance.SetPaused(isPaused);
-        OnPauseStateChanged?.Invoke(isPaused);
-        Debug.Log(isPaused ? "Game Paused" : "Game Resumed");
-    }
-
-    public void ResetGrid()
-    {
-        // Destroy all existing cell objects
-        foreach (var cellObject in cellObjects.Values)
-        {
-            Destroy(cellObject);
-        }
-
-        cellObjects.Clear();
-
-        // Reset the grid
-        Grid = new Grid(gridSize);
-        InitializeGrid();
-
-        StatManager.Instance.ResetStats();
-        StatManager.Instance.SetPaused(true);
-        Debug.Log("Grid and Stats Reset");
-    }
-
-    public void IncreaseSpeed()
-    {
-        UpdateInterval -= 0.1f;
-        Debug.Log($"Speed Increased. New interval: {UpdateInterval}");
-    }
-
-    public void DecreaseSpeed()
-    {
-        UpdateInterval += 0.1f;
-        Debug.Log($"Speed Decreased. New interval: {UpdateInterval}");
-    }
+    #endregion
 }

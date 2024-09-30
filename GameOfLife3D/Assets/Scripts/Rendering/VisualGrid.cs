@@ -1,14 +1,18 @@
 using System.Collections.Generic;
+
 using UnityEngine;
 
 public class VisualGrid : MonoBehaviour
 {
+    #region Public Fields
     [Header("Settings :")]
     public Color gridColor = new(0.5f, 0.5f, 0.5f, 0.2f);
     public Color highlightColor = Color.yellow;
     public float gridLineWidth = 0.02f;
     public float highlightLineWidth = 0.04f;
+    #endregion
 
+    #region Private Fields
     private int gridSize;
     private float cellSize;
     private Vector3 gridOffset;
@@ -17,18 +21,91 @@ public class VisualGrid : MonoBehaviour
     private readonly List<LineRenderer> highlightLines = new();
     private readonly List<List<LineRenderer>> layerLines = new();
     private readonly List<LineRenderer> verticalLines = new();
-    public int VisibleLayers { get; private set; }
 
+    private static readonly int[,] CubeEdges = new int[,]
+    {
+            {0, 1}, {1, 4}, {4, 2},
+            {2, 0}, {0, 3}, {1, 5},
+            {4, 7}, {2, 6}, {3, 5},
+            {5, 7}, {7, 6}, {6, 3}
+    };
+    #endregion
+
+    #region Properties
+    public int VisibleLayers { get; private set; }
+    #endregion
+
+    #region Public Methods
     public void Initialize(int _size, float _cellSize)
     {
         gridSize = _size;
         cellSize = _cellSize;
         CreateGrid();
         CreateHighlightLines();
-
-        
     }
 
+    public void UpdateGridSize(int _newSize, float _newCellSize)
+    {
+        gridSize = _newSize;
+        cellSize = _newCellSize;
+        CreateGrid();
+        CreateHighlightLines();
+    }
+
+    public void HighlightCell(Vector3Int _cellPosition)
+    {
+        Vector3 start = new Vector3(_cellPosition.x, _cellPosition.y, _cellPosition.z) * cellSize - gridOffset;
+        Vector3 end = start + Vector3.one * cellSize;
+
+        Vector3[] positions = new Vector3[]
+        {
+            start,
+            new(end.x, start.y, start.z),
+            new(start.x, end.y, start.z),
+            new(start.x, start.y, end.z),
+            new(end.x, end.y, start.z),
+            new(end.x, start.y, end.z),
+            new(start.x, end.y, end.z),
+            end
+        };
+
+        for (int i = 0; i < 12; i++)
+        {
+            LineRenderer lr = highlightLines[i];
+            lr.SetPosition(0, positions[CubeEdges[i, 0]]);
+            lr.SetPosition(1, positions[CubeEdges[i, 1]]);
+            lr.gameObject.SetActive(true);
+        }
+    }
+
+    public void UnhighlightCell()
+    {
+        foreach (var lr in highlightLines)
+        {
+            lr.gameObject.SetActive(false);
+        }
+    }
+
+    public void ShowLayer()
+    {
+        if (VisibleLayers < gridSize + 1)
+        {
+            VisibleLayers++;
+            UpdateVisibleLayers();
+        }
+    }
+
+    public void HideLayer()
+    {
+        if (VisibleLayers > 2)
+        {
+            VisibleLayers--;
+            UpdateVisibleLayers();
+        }
+    }
+    #endregion
+
+    #region Private Methods
     private void CreateGrid()
     {
         ClearExistingLines(gridLines);
@@ -68,6 +145,7 @@ public class VisualGrid : MonoBehaviour
     private void CreateHighlightLines()
     {
         ClearExistingLines(highlightLines);
+
         for (int i = 0; i < 12; i++) // 12 edges for a cube
         {
             LineRenderer lr = CreateLine(Vector3.zero, Vector3.zero, highlightColor, highlightLineWidth);
@@ -99,48 +177,6 @@ public class VisualGrid : MonoBehaviour
         return lr;
     }
 
-    public void HighlightCell(Vector3Int _cellPosition)
-    {
-        Vector3 start = new Vector3(_cellPosition.x, _cellPosition.y, _cellPosition.z) * cellSize - gridOffset;
-        Vector3 end = start + Vector3.one * cellSize;
-
-        Vector3[] positions = new Vector3[]
-        {
-            start,
-            new(end.x, start.y, start.z),
-            new(start.x, end.y, start.z),
-            new(start.x, start.y, end.z),
-            new(end.x, end.y, start.z),
-            new(end.x, start.y, end.z),
-            new(start.x, end.y, end.z),
-            end
-        };
-
-        for (int i = 0; i < 12; i++)
-        {
-            LineRenderer lr = highlightLines[i];
-            lr.SetPosition(0, positions[CubeEdges[i, 0]]);
-            lr.SetPosition(1, positions[CubeEdges[i, 1]]);
-            lr.gameObject.SetActive(true);
-        }
-    }
-
-    public void UnhighlightCell()
-    {
-        foreach (var lr in highlightLines)
-        {
-            lr.gameObject.SetActive(false);
-        }
-    }
-
-    public void UpdateGridSize(int _newSize, float _newCellSize)
-    {
-        gridSize = _newSize;
-        cellSize = _newCellSize;
-        CreateGrid();
-        CreateHighlightLines();
-    }
-
     private void ClearExistingLines(List<LineRenderer> _lines)
     {
         foreach (var lr in _lines)
@@ -151,32 +187,6 @@ public class VisualGrid : MonoBehaviour
             }
         }
         _lines.Clear();
-    }
-
-    private static readonly int[,] CubeEdges = new int[,]
-    {
-        {0, 1}, {1, 4}, {4, 2},
-        {2, 0}, {0, 3}, {1, 5},
-        {4, 7}, {2, 6}, {3, 5},
-        {5, 7}, {7, 6}, {6, 3}
-    };
-
-    public void ShowLayer()
-    {
-        if (VisibleLayers < gridSize + 1)
-        {
-            VisibleLayers++;
-            UpdateVisibleLayers();
-        }
-    }
-
-    public void HideLayer()
-    {
-        if (VisibleLayers > 2)
-        {
-            VisibleLayers--;
-            UpdateVisibleLayers();
-        }
     }
 
     private void UpdateVisibleLayers()
@@ -205,4 +215,5 @@ public class VisualGrid : MonoBehaviour
             line.SetPosition(1, endPos);
         }
     }
+    #endregion
 }

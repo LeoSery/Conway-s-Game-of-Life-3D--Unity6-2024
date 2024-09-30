@@ -1,50 +1,44 @@
 using System.Linq;
+
 using UnityEngine;
 
 public class StatManager : MonoBehaviour
 {
+    #region Singleton
     public static StatManager Instance { get; private set; }
+    #endregion
 
+    #region Events
     public delegate void StatsUpdateHandler();
     public static event StatsUpdateHandler OnStatsUpdate;
+    #endregion
 
-    [SerializeField]
-    private int currentCycle = 0;
+    #region Public Fields And Properties
+    [SerializeField] private int currentCycle = 0;
     public int CurrentCycle => currentCycle;
 
-    [SerializeField]
-    private int aliveCells;
+    [SerializeField] private int aliveCells;
     public int AliveCells => aliveCells;
 
-    [SerializeField]
-    private int totalCells;
+    [SerializeField] private int totalCells;
     public int TotalCells => totalCells;
 
-    [SerializeField]
-    private float simulationTime;
+    [SerializeField] private float simulationTime;
     public float SimulationTime => simulationTime;
 
-    [SerializeField]
-    private float currentFPS;
+    [SerializeField] private float currentFPS;
     public float CurrentFPS => currentFPS;
 
     public int DeadCells => Mathf.Max(0, totalCells - aliveCells);
+    #endregion
 
-    private float fpsUpdateInterval = 0.5f;
+    #region Private Fields
+    private readonly float fpsUpdateInterval = 0.5f;
     private float fpsTimer = 0f;
     private bool isPaused = true;
+    #endregion
 
-    private void OnEnable()
-    {
-        GameManager.OnCycleComplete += UpdateCycleStats;
-    }
-
-    private void OnDisable()
-    {
-        GameManager.OnCycleComplete -= UpdateCycleStats;
-
-    }
-
+    #region Lifecycle Methods
     private void Awake()
     {
         if (Instance == null)
@@ -58,6 +52,17 @@ public class StatManager : MonoBehaviour
         }
     }
 
+    private void OnEnable()
+    {
+        GameManager.OnCycleComplete += UpdateCycleStats;
+    }
+
+    private void OnDisable()
+    {
+        GameManager.OnCycleComplete -= UpdateCycleStats;
+
+    }
+
     private void Update()
     {
         if (!isPaused)
@@ -66,7 +71,9 @@ public class StatManager : MonoBehaviour
             UpdateFPS();
         }
     }
+    #endregion
 
+    #region Public Methods
     public void InitializeStats()
     {
         currentCycle = 0;
@@ -78,6 +85,30 @@ public class StatManager : MonoBehaviour
         OnStatsUpdate?.Invoke();
     }
 
+    public void UpdateTotalCells()
+    {
+        totalCells = GetTotalCells();
+    }
+
+    public void SetPaused(bool _paused)
+    {
+        isPaused = _paused;
+    }
+
+    public void ResetStats()
+    {
+        currentCycle = 0;
+        aliveCells = 0;
+        totalCells = GetTotalCells();
+        simulationTime = 0f;
+        currentFPS = 0f;
+        fpsTimer = 0f;
+
+        OnStatsUpdate?.Invoke();
+    }
+    #endregion
+
+    #region Private Methods
     private void UpdateCycleStats()
     {
         currentCycle++;
@@ -95,28 +126,6 @@ public class StatManager : MonoBehaviour
             currentFPS = 1f / Time.unscaledDeltaTime;
             fpsTimer = 0f;
         }
-    }
-
-    public void UpdateTotalCells()
-    {
-        totalCells = GetTotalCells();
-    }
-
-    public void SetPaused(bool paused)
-    {
-        isPaused = paused;
-    }
-
-    public void ResetStats()
-    {
-        currentCycle = 0;
-        aliveCells = 0;
-        totalCells = GetTotalCells();
-        simulationTime = 0f;
-        currentFPS = 0f;
-        fpsTimer = 0f;
-
-        OnStatsUpdate?.Invoke();
     }
 
     private int GetAliveCells()
@@ -145,4 +154,5 @@ public class StatManager : MonoBehaviour
             return 0;
         }
     }
+    #endregion
 }

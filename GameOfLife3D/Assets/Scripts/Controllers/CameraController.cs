@@ -2,22 +2,29 @@ using UnityEngine;
 
 public class CameraController : MonoBehaviour
 {
+    #region Public Fields
     public Camera mainCamera;
+
     [Header("Mouse Sensitivity")]
     public float mouseHorizontalSensitivity = 2f;
     public float mouseVerticalSensitivity = 2f;
+
     [Header("Movement Speed")]
     public float horizontalMoveSpeed = 5f;
     public float verticalMoveSpeed = 5f;
+
     [Header("Movement Limits")]
     public float additionalDistanceFromGrid = 5f;
+    #endregion
 
+    #region Private Fields
     private float horizontalRotation = 0f;
     private float verticalRotation = 0f;
     private bool isActive = true;
-    private Vector3 gridCenter;
     private float maxDistanceFromCenter;
+    #endregion
 
+    #region Unity Lifecycle Methods
     private void Start()
     {
         if (InputManager.Instance == null)
@@ -44,11 +51,6 @@ public class CameraController : MonoBehaviour
         UpdateGridInfo();
     }
 
-    public void UpdateGridInfo()
-    {
-        maxDistanceFromCenter = (GameManager.Instance.gridSize / 2f) + additionalDistanceFromGrid;
-    }
-
     private void OnDisable()
     {
         if (InputManager.Instance != null)
@@ -58,18 +60,32 @@ public class CameraController : MonoBehaviour
             InputManager.Instance.OnFocusChanged -= HandleFocusChanged;
         }
     }
+    #endregion
 
-    private void HandleFocusChanged(bool isFocused)
+    #region Pubic Methods
+    public void OnGridSizeChanged()
     {
-        isActive = isFocused;
+        UpdateGridInfo();
     }
 
-    private void HandleMouseLook(Vector2 mouseDelta)
+    public void UpdateGridInfo()
+    {
+        maxDistanceFromCenter = (GameManager.Instance.gridSize / 2f) + additionalDistanceFromGrid;
+    }
+    #endregion
+
+    #region Private Methods
+    private void HandleFocusChanged(bool _isFocused)
+    {
+        isActive = _isFocused;
+    }
+
+    private void HandleMouseLook(Vector2 _mouseDelta)
     {
         if (!isActive || mainCamera == null) return;
 
-        float deltaX = mouseDelta.x * mouseHorizontalSensitivity;
-        float deltaY = mouseDelta.y * mouseVerticalSensitivity;
+        float deltaX = _mouseDelta.x * mouseHorizontalSensitivity;
+        float deltaY = _mouseDelta.y * mouseVerticalSensitivity;
 
         horizontalRotation += deltaX;
         verticalRotation -= deltaY;
@@ -78,12 +94,12 @@ public class CameraController : MonoBehaviour
         mainCamera.transform.rotation = Quaternion.Euler(verticalRotation, horizontalRotation, 0f);
     }
 
-    private void HandleMovement(Vector3 movement)
+    private void HandleMovement(Vector3 _movement)
     {
         if (!isActive || mainCamera == null) return;
 
-        Vector3 horizontalMove = horizontalMoveSpeed * movement.x * mainCamera.transform.right;
-        Vector3 verticalMove = movement.z * verticalMoveSpeed * mainCamera.transform.forward;
+        Vector3 horizontalMove = horizontalMoveSpeed * _movement.x * mainCamera.transform.right;
+        Vector3 verticalMove = _movement.z * verticalMoveSpeed * mainCamera.transform.forward;
         Vector3 targetPosition = (horizontalMove + verticalMove) * Time.deltaTime;
 
         Vector3 finalPositon = mainCamera.transform.position + targetPosition;
@@ -98,18 +114,14 @@ public class CameraController : MonoBehaviour
         }
     }
 
-    private bool IsWithinBounds(Vector3 position)
+    private bool IsWithinBounds(Vector3 _position)
     {
-        return position.magnitude <= maxDistanceFromCenter;
+        return _position.magnitude <= maxDistanceFromCenter;
     }
 
-    private Vector3 GetClosestValidPosition(Vector3 position)
+    private Vector3 GetClosestValidPosition(Vector3 _position)
     {
-        return position.normalized * maxDistanceFromCenter;
+        return _position.normalized * maxDistanceFromCenter;
     }
-
-    public void OnGridSizeChanged()
-    {
-        UpdateGridInfo();
-    }
+    #endregion
 }

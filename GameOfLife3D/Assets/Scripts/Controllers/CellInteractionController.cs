@@ -1,19 +1,25 @@
+using System.Collections;
+
 using UnityEngine;
+
 using Unity.Mathematics;
 
 public class CellInteractionController : MonoBehaviour
 {
+    #region Public Fields
     public float interactionDistance = 10f;
     public Color highlightColor = Color.yellow;
+    #endregion
 
+    #region Private Fields
     private Camera mainCamera;
     private Grid grid;
     private VisualGrid visualGrid;
-    private GameObject highlightedCell;
-    private Vector3 gridWorldPosition;
     private Vector3 gridOffset;
-
     private Vector3Int? lastHighlightedCell;
+    #endregion
+
+    #region Unity Lifecycle Methods
 
     private void Start()
     {
@@ -36,7 +42,28 @@ public class CellInteractionController : MonoBehaviour
         visualGrid = GameManager.Instance.visualGrid;
     }
 
-    private System.Collections.IEnumerator WaitForGameManager()
+    private void OnDisable()
+    {
+        UnsubscribeToEvents();
+    }
+    #endregion
+
+    #region Public Methods
+    public void ShowLayer()
+    {
+        visualGrid.ShowLayer();
+        UpdateCellHighlight();
+    }
+
+    public void HideLayer()
+    {
+        visualGrid.HideLayer();
+        UpdateCellHighlight();
+    }
+    #endregion
+
+    #region Private Methods
+    private IEnumerator WaitForGameManager()
     {
         while (GameManager.Instance == null || GameManager.Instance.Grid == null || GameManager.Instance.visualGrid == null)
         {
@@ -45,7 +72,6 @@ public class CellInteractionController : MonoBehaviour
 
         grid = GameManager.Instance.Grid;
         visualGrid = GameManager.Instance.visualGrid;
-        gridWorldPosition = visualGrid.transform.position;
         gridOffset = new Vector3(-5f, -5f, 0f);
 
         if (InputManager.Instance != null)
@@ -55,6 +81,36 @@ public class CellInteractionController : MonoBehaviour
         else
         {
             Debug.LogError("InputManager instance is null. Make sure it's initialized before CellInteractionController.");
+        }
+    }
+
+    private void SubscribeToEvents()
+    {
+        if (InputManager.Instance != null)
+        {
+            InputManager.Instance.OnPlaceCell += PlaceCell;
+            InputManager.Instance.OnRemoveCell += RemoveCell;
+
+            InputManager.Instance.OnMove += HandleMovement;
+            InputManager.Instance.OnMouseLook += HandleMouseLook;
+
+            InputManager.Instance.OnShowLayer += ShowLayer;
+            InputManager.Instance.OnHideLayer += HideLayer;
+        }
+    }
+
+    private void UnsubscribeToEvents()
+    {
+        if (InputManager.Instance != null)
+        {
+            InputManager.Instance.OnPlaceCell -= PlaceCell;
+            InputManager.Instance.OnRemoveCell -= RemoveCell;
+
+            InputManager.Instance.OnMove -= HandleMovement;
+            InputManager.Instance.OnMouseLook -= HandleMouseLook;
+
+            InputManager.Instance.OnShowLayer -= ShowLayer;
+            InputManager.Instance.OnHideLayer -= HideLayer;
         }
     }
 
@@ -152,36 +208,6 @@ public class CellInteractionController : MonoBehaviour
                _cellPosition.z >= 0 && _cellPosition.z < grid.GridSize;
     }
 
-    private void SubscribeToEvents()
-    {
-        if (InputManager.Instance != null)
-        {
-            InputManager.Instance.OnPlaceCell += PlaceCell;
-            InputManager.Instance.OnRemoveCell += RemoveCell;
-
-            InputManager.Instance.OnMove += HandleMovement;
-            InputManager.Instance.OnMouseLook += HandleMouseLook;
-
-            InputManager.Instance.OnShowLayer += ShowLayer;
-            InputManager.Instance.OnHideLayer += HideLayer;
-        }
-    }
-
-    private void OnDisable()
-    {
-        if (InputManager.Instance != null)
-        {
-            InputManager.Instance.OnPlaceCell -= PlaceCell;
-            InputManager.Instance.OnRemoveCell -= RemoveCell;
-
-            InputManager.Instance.OnMove -= HandleMovement;
-            InputManager.Instance.OnMouseLook -= HandleMouseLook;
-
-            InputManager.Instance.OnShowLayer -= ShowLayer;
-            InputManager.Instance.OnHideLayer -= HideLayer;
-        }
-    }
-
     private void HandleMovement(Vector3 _movement)
     {
         UpdateCellHighlight();
@@ -209,16 +235,5 @@ public class CellInteractionController : MonoBehaviour
             GameManager.Instance.DestroyCell(new int3(cellPosition.x, cellPosition.y, cellPosition.z));
         }
     }
-
-    public void ShowLayer()
-    {
-        visualGrid.ShowLayer();
-        UpdateCellHighlight();
-    }
-
-    public void HideLayer()
-    {
-        visualGrid.HideLayer();
-        UpdateCellHighlight();
-    }
+    #endregion
 }

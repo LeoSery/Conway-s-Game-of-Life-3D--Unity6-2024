@@ -5,57 +5,108 @@ using Unity.Mathematics;
 
 public class Grid
 {
+    #region Private Fields
     private readonly HashSet<int3> activeCells;
     private readonly Dictionary<int3, byte> cellStates;
-
     private int gridSize;
-    public int GridSize => gridSize;
 
     private static readonly int3[] neighborOffsets =
     {
-        new int3(-1, -1, -1), new int3(-1, -1, 0), new int3(-1, -1, 1),
-        new int3(-1, 0, -1),  new int3(-1, 0, 0),  new int3(-1, 0, 1),
-        new int3(-1, 1, -1),  new int3(-1, 1, 0),  new int3(-1, 1, 1),
-        new int3(0, -1, -1),  new int3(0, -1, 0),  new int3(0, -1, 1),
-        new int3(0, 0, -1),                        new int3(0, 0, 1),
-        new int3(0, 1, -1),   new int3(0, 1, 0),   new int3(0, 1, 1),
-        new int3(1, -1, -1),  new int3(1, -1, 0),  new int3(1, -1, 1),
-        new int3(1, 0, -1),   new int3(1, 0, 0),   new int3(1, 0, 1),
-        new int3(1, 1, -1),   new int3(1, 1, 0),   new int3(1, 1, 1)
+        new(-1, -1, -1), new(-1, -1, 0), new(-1, -1, 1),
+        new(-1, 0, -1),  new(-1, 0, 0),  new(-1, 0, 1),
+        new(-1, 1, -1),  new(-1, 1, 0),  new(-1, 1, 1),
+        new(0, -1, -1),  new(0, -1, 0),  new(0, -1, 1),
+        new(0, 0, -1),                   new(0, 0, 1),
+        new(0, 1, -1),   new(0, 1, 0),   new(0, 1, 1),
+        new(1, -1, -1),  new(1, -1, 0),  new(1, -1, 1),
+        new(1, 0, -1),   new(1, 0, 0),   new(1, 0, 1),
+        new(1, 1, -1),   new(1, 1, 0),   new(1, 1, 1)
     };
+    #endregion
 
-    public Grid(int size)
+    #region Properties
+    public int GridSize => gridSize;
+    #endregion
+
+    #region Constructors
+    public Grid(int _size)
     {
-        gridSize = size;
+        gridSize = _size;
         activeCells = new HashSet<int3>();
         cellStates = new Dictionary<int3, byte>();
     }
+    #endregion
 
-    public void SetAlive(int3 position)
+    #region Public Methods
+    public void SetAlive(int3 _position)
     {
-        if (IsWithinBounds(position) && (!cellStates.ContainsKey(position) || cellStates[position] != 1))
+        if (IsWithinBounds(_position) && (!cellStates.ContainsKey(_position) || cellStates[_position] != 1))
         {
-            activeCells.Add(position);
-            cellStates[position] = CellState.Alive;
-            UpdateActiveArea(position);
+            activeCells.Add(_position);
+            cellStates[_position] = CellState.Alive;
+            UpdateActiveArea(_position);
         }
     }
 
-    public void RemoveCell(int3 position)
+    public void RemoveCell(int3 _position)
     {
-        if (cellStates.ContainsKey(position))
+        if (cellStates.ContainsKey(_position))
         {
-            activeCells.Remove(position);
-            cellStates.Remove(position);
-            UpdateInactiveArea(position);
+            activeCells.Remove(_position);
+            cellStates.Remove(_position);
+            UpdateInactiveArea(_position);
         }
     }
 
-    private void UpdateActiveArea(int3 position)
+    public bool IsAlive(int3 _position)
+    {
+        return IsWithinBounds(_position) && cellStates.TryGetValue(_position, out byte state) && state == CellState.Alive;
+    }
+
+    public int CountAliveNeighbors(int3 _position)
+    {
+        return neighborOffsets.Count(offset =>
+        {
+            int3 neighborPos = _position + offset;
+            return cellStates.TryGetValue(neighborPos, out byte state) && state == 1;
+        });
+    }
+
+    public IEnumerable<Cell> GetActiveCells()
+    {
+        return cellStates.Select(kvp => new Cell(kvp.Key, kvp.Value));
+    }
+
+    public void Resize(int _newSize)
+    {
+        gridSize = _newSize;
+
+        var cellsToRemove = cellStates.Keys.Where(pos => !IsWithinBounds(pos)).ToList();
+
+        foreach (var pos in cellsToRemove)
+        {
+            RemoveCell(pos);
+        }
+    }
+
+    public string GetStateNameFromValue(byte _state)
+    {
+        return _state switch
+        {
+            CellState.Dead => "Dead",
+            CellState.Alive => "Alive",
+            CellState.ActiveZone => "Active Zone",
+            _ => "Unknown",
+        };
+    }
+    #endregion
+
+    #region Private Methods
+    private void UpdateActiveArea(int3 _position)
     {
         foreach (var offset in neighborOffsets)
         {
-            int3 neighbor = position + offset;
+            int3 neighbor = _position + offset;
 
             if (IsWithinBounds(neighbor) && !cellStates.ContainsKey(neighbor))
             {
@@ -64,11 +115,11 @@ public class Grid
         }
     }
 
-    private void UpdateInactiveArea(int3 position)
+    private void UpdateInactiveArea(int3 _position)
     {
         foreach (var offset in neighborOffsets)
         {
-            int3 neighbor = position + offset;
+            int3 neighbor = _position + offset;
 
             if (IsWithinBounds(neighbor) && cellStates.TryGetValue(neighbor, out byte state) && state == 2)
             {
@@ -93,51 +144,11 @@ public class Grid
         }
     }
 
-    public bool IsAlive(int3 position)
+    private bool IsWithinBounds(int3 _position)
     {
-        return IsWithinBounds(position) && cellStates.TryGetValue(position, out byte state) && state == CellState.Alive;
+        return _position.x >= 0 && _position.x < gridSize &&
+               _position.y >= 0 && _position.y < gridSize &&
+               _position.z >= 0 && _position.z < gridSize;
     }
-
-    public int CountAliveNeighbors(int3 position)
-    {
-        return neighborOffsets.Count(offset =>
-        {
-            int3 neighborPos = position + offset;
-            return cellStates.TryGetValue(neighborPos, out byte state) && state == 1;
-        });
-    }
-
-    public IEnumerable<Cell> GetActiveCells()
-    {
-        return cellStates.Select(kvp => new Cell(kvp.Key, kvp.Value));
-    }
-
-    private bool IsWithinBounds(int3 position)
-    {
-        return position.x >= 0 && position.x < gridSize &&
-               position.y >= 0 && position.y < gridSize &&
-               position.z >= 0 && position.z < gridSize;
-    }
-
-    public void Resize(int newSize)
-    {
-        gridSize = newSize;
-
-        var cellsToRemove = cellStates.Keys.Where(pos => !IsWithinBounds(pos)).ToList();
-
-        foreach (var pos in cellsToRemove)
-        {
-            RemoveCell(pos);
-        }
-    }
-    public string GetStateNameFromValue(byte _state)
-    {
-        return _state switch
-        {
-            CellState.Dead => "Dead",
-            CellState.Alive => "Alive",
-            CellState.ActiveZone => "Active Zone",
-            _ => "Unknown",
-        };
-    }
+    #endregion
 }

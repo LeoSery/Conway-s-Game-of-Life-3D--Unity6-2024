@@ -1,31 +1,36 @@
-using UnityEngine;
+using System.Collections.Generic;
+using System;
+
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
-using System;
-using System.Collections.Generic;
+using UnityEngine;
 
 public class InputManager : MonoBehaviour
 {
+    #region Singleton
     public static InputManager Instance { get; private set; }
+    #endregion
 
+    #region Events
     public event Action<Vector2> OnMouseLook;
     public event Action<Vector3> OnMove;
-
     public event Action OnPlaceCell;
     public event Action OnRemoveCell;
-
     public event Action<bool> OnFocusChanged;
-
     public event Action OnShowLayer;
     public event Action OnHideLayer;
+    #endregion
 
+    #region Private Fields
     private bool ignoreNextMouseMovement = false;
     private bool isFocused = false;
 
     private GraphicRaycaster graphicRaycaster;
     private PointerEventData pointerEventData;
     private EventSystem eventSystem;
+    #endregion
 
+    #region Unity Lifecycle Methods
     private void Awake()
     {
         if (Instance == null)
@@ -82,21 +87,39 @@ public class InputManager : MonoBehaviour
             OnHideLayer?.Invoke();
         }
     }
+    #endregion
 
-    private void CheckForUIClick()
+    #region Public Methods
+    public void ToggleFocus()
     {
-        pointerEventData = new PointerEventData(eventSystem);
-        pointerEventData.position = Input.mousePosition;
-
-        List<RaycastResult> results = new List<RaycastResult>();
-        graphicRaycaster.Raycast(pointerEventData, results);
-
-        if (results.Count == 0)
-        {
-            SetFocus(true);
-        }
+        SetFocus(!isFocused);
     }
 
+    public void SetFocus(bool _focused)
+    {
+        if (isFocused != _focused)
+        {
+            isFocused = _focused;
+
+            if (isFocused)
+            {
+                ignoreNextMouseMovement = true;
+            }
+
+#if UNITY_EDITOR
+            Cursor.visible = !isFocused;
+            //Debug.Log($"Editor mode: SetFocus called. isFocused: {isFocused}, Cursor visible: {Cursor.visible}");
+#else
+            Cursor.visible = !isFocused;
+            Cursor.lockState = isFocused ? CursorLockMode.Locked : CursorLockMode.None;
+#endif
+
+            OnFocusChanged?.Invoke(isFocused);
+        }
+    }
+    #endregion
+
+    #region Private Methods
     private void HandleMouseLook()
     {
         float mouseX = Input.GetAxis("Mouse X");
@@ -125,31 +148,20 @@ public class InputManager : MonoBehaviour
         }
     }
 
-    public void ToggleFocus()
+    private void CheckForUIClick()
     {
-        SetFocus(!isFocused);
-    }
-
-    public void SetFocus(bool focused)
-    {
-        if (isFocused != focused)
+        pointerEventData = new PointerEventData(eventSystem)
         {
-            isFocused = focused;
+            position = Input.mousePosition
+        };
 
-            if (isFocused)
-            {
-                ignoreNextMouseMovement = true;
-            }
+        List<RaycastResult> results = new();
+        graphicRaycaster.Raycast(pointerEventData, results);
 
-#if UNITY_EDITOR
-            Cursor.visible = !isFocused;
-            //Debug.Log($"Editor mode: SetFocus called. isFocused: {isFocused}, Cursor visible: {Cursor.visible}");
-#else
-            Cursor.visible = !isFocused;
-            Cursor.lockState = isFocused ? CursorLockMode.Locked : CursorLockMode.None;
-#endif
-
-            OnFocusChanged?.Invoke(isFocused);
+        if (results.Count == 0)
+        {
+            SetFocus(true);
         }
     }
+    #endregion
 }

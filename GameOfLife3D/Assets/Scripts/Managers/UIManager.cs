@@ -6,8 +6,11 @@ using TMPro;
 
 public class UIManager : MonoBehaviour
 {
+    #region Singleton
     public static UIManager Instance { get; private set; }
+    #endregion
 
+    #region Public Fields
     [Header("Buttons :")]
     public Button PauseButton;
     public Button PlayButton;
@@ -32,25 +35,15 @@ public class UIManager : MonoBehaviour
     public TextMeshProUGUI simulationTimeText;
     public TextMeshProUGUI fpsText;
     public TextMeshProUGUI simulationStateText;
+    #endregion
 
+    #region Private Fields
     private StatManager statManager;
     private GameManager gameManager;
-
-    private CellInteractionController cellInteractionController;
     private CameraController cameraController;
+    #endregion
 
-    private void OnEnable()
-    {
-        StatManager.OnStatsUpdate += OnStatsUpdateChanged;
-        GameManager.OnPauseStateChanged += OnPauseStateChanged;
-    }
-
-    private void OnDisable()
-    {
-        StatManager.OnStatsUpdate -= OnStatsUpdateChanged;
-        GameManager.OnPauseStateChanged -= OnPauseStateChanged;
-    }
-
+    #region Unity Lifecycle Methods
     private void Awake()
     {
         if (Instance == null)
@@ -64,12 +57,23 @@ public class UIManager : MonoBehaviour
         }
     }
 
+    private void OnEnable()
+    {
+        StatManager.OnStatsUpdate += OnStatsUpdateChanged;
+        GameManager.OnPauseStateChanged += OnPauseStateChanged;
+    }
+
+    private void OnDisable()
+    {
+        StatManager.OnStatsUpdate -= OnStatsUpdateChanged;
+        GameManager.OnPauseStateChanged -= OnPauseStateChanged;
+    }
+
     private void Start()
     {
         statManager = StatManager.Instance;
         gameManager = GameManager.Instance;
         
-        cellInteractionController = gameManager.cellInteractionController;
         cameraController = gameManager.CameraController;
 
         SetupButtonListeners();
@@ -78,12 +82,39 @@ public class UIManager : MonoBehaviour
         UpdateEditPanelsVisibility(gameManager.IsPaused);
         UpdateStateButtonVisibility(gameManager.IsPaused);
     }
-
     private void Update()
     {
         UpdateDynamicStatsDisplay();
     }
+    #endregion
 
+    #region Public Methods
+    public void UpdateDynamicStatsDisplay()
+    {
+        if (statManager != null)
+        {
+            simulationTimeText.text = $"Simulation time : {statManager.SimulationTime:F2}s";
+            fpsText.text = $"FPS : {statManager.CurrentFPS:F2}";
+        }
+    }
+
+    public void UpdateCycleStatsDisplay()
+    {
+        if (statManager != null)
+        {
+            cycleText.text = $"Cycle : {statManager.CurrentCycle}";
+            aliveCellsText.text = $"Alive Cells : {statManager.AliveCells}";
+            deadCellsText.text = $"Dead Cells : {statManager.DeadCells}";
+        }
+
+        if (gameManager != null)
+        {
+            UpdateStateButtonVisibility(gameManager.IsPaused);
+        }
+    }
+    #endregion
+
+    #region Private Methods
     private void SetupConfigPanel()
     {
         gridSizeSlider.minValue = gameManager.minGridSize;
@@ -101,15 +132,6 @@ public class UIManager : MonoBehaviour
         UpdateCycleSpeedText(gameManager.UpdateInterval);
     }
 
-    private void SetupButtonListeners()
-    {
-        AssignButtonToAction(PauseButton, gameManager.TogglePause);
-        AssignButtonToAction(PlayButton, gameManager.TogglePause);
-        AssignButtonToAction(ResetButton, gameManager.ResetGrid);
-        AssignButtonToAction(LayerUpButton, gameManager.cellInteractionController.ShowLayer);
-        AssignButtonToAction(LayerDownButton, gameManager.cellInteractionController.HideLayer);
-    }
-
     private void AssignButtonToAction(Button _button, UnityAction _action)
     {
         if (_button != null && _action != null)
@@ -120,6 +142,15 @@ public class UIManager : MonoBehaviour
         {
             Debug.LogError($"Button : '{(_button != null ? _button.name : null)}' or Action is null");
         }
+    }
+
+    private void SetupButtonListeners()
+    {
+        AssignButtonToAction(PauseButton, gameManager.TogglePause);
+        AssignButtonToAction(PlayButton, gameManager.TogglePause);
+        AssignButtonToAction(ResetButton, gameManager.ResetGrid);
+        AssignButtonToAction(LayerUpButton, gameManager.cellInteractionController.ShowLayer);
+        AssignButtonToAction(LayerDownButton, gameManager.cellInteractionController.HideLayer);
     }
 
     private void OnGridSizeChanged(float _value)
@@ -181,28 +212,5 @@ public class UIManager : MonoBehaviour
         simulationStateText.text = _isPaused ? "Simulation Paused" : "Simulation Running";
         simulationStateText.color = _isPaused ? new Color32(222, 95, 95, 255) : new Color32(95, 222, 95, 255);
     }
-
-    public void UpdateDynamicStatsDisplay()
-    {
-        if (statManager != null)
-        {
-            simulationTimeText.text = $"Simulation time : {statManager.SimulationTime:F2}s";
-            fpsText.text = $"FPS : {statManager.CurrentFPS:F2}";
-        }
-    }
-
-    public void UpdateCycleStatsDisplay()
-    {
-        if (statManager != null)
-        {
-            cycleText.text = $"Cycle : {statManager.CurrentCycle}";
-            aliveCellsText.text = $"Alive Cells : {statManager.AliveCells}";
-            deadCellsText.text = $"Dead Cells : {statManager.DeadCells}";
-        }
-
-        if (gameManager != null)
-        {
-            UpdateStateButtonVisibility(gameManager.IsPaused);
-        }
-    }
+    #endregion
 }

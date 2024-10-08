@@ -64,8 +64,6 @@ The project focuses on performance, optimization and scalability.
 
 ![GameOfLife3D_Screen_5](./ReadmeContent/GameScreenshots/GameOfLife_Screen_5.png)
 
-![GameOfLife3D_Screen_6](./ReadmeContent/GameScreenshots/GameOfLife_Screen_6.png)
-
 ![GameOfLife3D_Demo_2](./ReadmeContent/TechnicalDemoGifs/GameOfLife3D_Demo_2.gif)
 
 ## Technical Part 

@@ -18,7 +18,7 @@ This project implements a 3D version of Conway's Game of Life using Unity and C#
 
 More information about “*Conway's Game of Life*” [Here](https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life) : 
 
-Features include:
+Features included :
 
 - Interactive 3D grid with adjustable size (5x5x5 to 50x50x50)
 - User interface to control simulation (pause, speed, reset)
@@ -29,7 +29,7 @@ Features include:
 
 The project focuses on performance, optimization and scalability.
 
-- Controls:
+- Controls :
 
     Moving :
     - Moving forward > `Z`
@@ -37,7 +37,7 @@ The project focuses on performance, optimization and scalability.
     - Moving backwards > `S`
     - Moving Right > `D`
 
-    Caméra :
+    Camera :
     - Orient camera > `Mouse`
 
     Cells :
@@ -50,7 +50,7 @@ The project focuses on performance, optimization and scalability.
 
     Simulation control (Using the in-game UI) : 
     
-    ![ConfigPanelTuto](https://hackmd.io/_uploads/BJeDcBZJJx.png)
+    ![ConfigPanelTuto](./ReadmeContent/GameScreenshots/GameOfLife_UI_Screen_1.png)
 
 ## Project pictures
 
@@ -58,19 +58,19 @@ The project focuses on performance, optimization and scalability.
 
 ![GameOfLife3D_Screen_2](./ReadmeContent/GameScreenshots/GameOfLife_Screen_2.png)
 
-![GameOfLife3D_Screen_2](./ReadmeContent/GameScreenshots/GameOfLife_Screen_3.png)
+![GameOfLife3D_Screen_3](./ReadmeContent/GameScreenshots/GameOfLife_Screen_3.png)
 
-![GameOfLife3D_Screen_3](./ReadmeContent/GameScreenshots/GameOfLife_Screen_4.png)
+![GameOfLife3D_Screen_4](./ReadmeContent/GameScreenshots/GameOfLife_Screen_4.png)
 
-![GameOfLife3D_Screen_4](./ReadmeContent/GameScreenshots/GameOfLife_Screen_5.png)
+![GameOfLife3D_Screen_5](./ReadmeContent/GameScreenshots/GameOfLife_Screen_5.png)
 
-![GameOfLife3D_Screen_5](./ReadmeContent/GameScreenshots/GameOfLife_Screen_6.png)
+![GameOfLife3D_Screen_6](./ReadmeContent/GameScreenshots/GameOfLife_Screen_6.png)
 
 ![GameOfLife3D_Demo_2](./ReadmeContent/TechnicalDemoGifs/GameOfLife3D_Demo_2.gif)
 
 ## Technical Part 
 
-In this section, we'll delve into some of the key technical aspects of this 3D Game of Life's implementation. We'll focus on three crucial elements that showcase our approach to performance optimization and 3D space management.
+In this section, we'll delve into some of the key technical aspects of our 3D Game of Life implementation. We'll focus on three crucial elements that showcase our approach to performance optimization and 3D space management.
 
 ### 1. Efficient Cell State Management
 
@@ -116,7 +116,7 @@ private static readonly int3[] neighborOffsets =
 Key points about this implementation :
 
 - `HashSet<int3>` for `activeCells` allows for fast lookups and ensures unique entries.
-- `Dictionary<int3, byte>` for `cellState`s provides quick state access for each cell.
+- `Dictionary<int3, byte>` for `cellState` provides quick state access for each cell.
 - The `neighborOffsets` array pre-computes all possible neighbor positions, optimizing neighbor checks in 3D space.
 - Using `int3` (from *Unity.Mathematics*) for positions enables efficient 3D coordinate handling.
 

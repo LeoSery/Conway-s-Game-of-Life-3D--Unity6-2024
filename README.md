@@ -1,6 +1,6 @@
 # Game-of-Life-3D--Unity3D-2024
 
-This project is a 3D implementation of Conway's Game of Life, realized in C# with Unity. It's a cellular automaton simulation where cells evolve in a cubic space according to simple rules, generating patterns over the course of iterations. The user can interact with the grid in real time, adding or deleting cells, adjusting simulation speed and exploring 3D space with a free-form camera. The project focuses on performance and optimization.
+This project is a 3D implementation of Conway's Game of Life, realized in C# with Unity. It's a cellular automaton simulation where cells evolve in a 3D space according to simple rules, generating patterns over the course of iterations. The user can interact with the grid in real time, adding or deleting cells, adjusting simulation speed and exploring 3D space with a free-form camera. The project focuses on performance and optimization.
 
 ![GameOfLife3D_Demo_1](./ReadmeContent/TechnicalDemoGifs/GameOfLife3D_Demo_1.gif)
 
@@ -9,7 +9,7 @@ This project is a 3D implementation of Conway's Game of Life, realized in C# wit
 
 - [Project pitch](#project-pitch)
 - [Project pictures](#project-pictures)
-- [Technical part](#technical-part)
+- [Technical Section](#technical-section)
 - [How to play the demo](#how-to-play-the-demo)
 
 ## Project pitch
@@ -38,7 +38,7 @@ The project focuses on performance, optimization and scalability.
     - Moving Right > `D`
 
     Camera :
-    - Orient camera > `Mouse`
+    - Rotate camera > `Mouse`
 
     Cells :
     - Place > `Right click`
@@ -46,7 +46,7 @@ The project focuses on performance, optimization and scalability.
 
     Grid (using the in-game UI or) :
     - Show more layers > `Left Shift`
-    - Show one layer less > `Left CTRL`
+    - Show less layer > `Left CTRL`
 
     Simulation control (Using the in-game UI) : 
     
@@ -66,9 +66,9 @@ The project focuses on performance, optimization and scalability.
 
 ![GameOfLife3D_Demo_2](./ReadmeContent/TechnicalDemoGifs/GameOfLife3D_Demo_2.gif)
 
-## Technical Part 
+## Technical Section 
 
-In this section, we'll delve into some of the key technical aspects of our 3D Game of Life implementation. We'll focus on three crucial elements that showcase our approach to performance optimization and 3D space management.
+In this section, we'll delve into some of the key technical aspects of my 3D Game of Life implementation. We'll focus on three crucial elements that showcase our approach to performance optimization and 3D space management.
 
 ### 1. Efficient Cell State Management
 

@@ -43,8 +43,8 @@ public class InputManager : MonoBehaviour
             Destroy(gameObject);
         }
 
-        graphicRaycaster = FindObjectOfType<Canvas>().GetComponent<GraphicRaycaster>();
-        eventSystem = FindObjectOfType<EventSystem>();
+        graphicRaycaster = FindFirstObjectByType<Canvas>().GetComponent<GraphicRaycaster>();
+        eventSystem = FindFirstObjectByType<EventSystem>();
     }
 
     private void Start()

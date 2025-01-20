@@ -3,6 +3,9 @@ using System.Linq;
 
 using Unity.Mathematics;
 
+/// <summary>
+/// Represents a grid of cells.
+/// </summary>
 public class Grid
 {
     #region Private Fields
@@ -25,10 +28,17 @@ public class Grid
     #endregion
 
     #region Properties
+    /// <summary>
+    /// Gets the size of the grid.
+    /// </summary>
     public int GridSize => gridSize;
     #endregion
 
     #region Constructors
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Grid"/> class with the specified size.
+    /// </summary>
+    /// <param name="_size">The size of the grid.</param>
     public Grid(int _size)
     {
         gridSize = _size;
@@ -38,6 +48,10 @@ public class Grid
     #endregion
 
     #region Public Methods
+    /// <summary>
+    /// Sets the cell at the specified position to be alive.
+    /// </summary>
+    /// <param name="_position">The position of the cell.</param>
     public void SetAlive(int3 _position)
     {
         if (IsWithinBounds(_position) && (!cellStates.ContainsKey(_position) || cellStates[_position] != 1))
@@ -48,6 +62,10 @@ public class Grid
         }
     }
 
+    /// <summary>
+    /// Removes the cell at the specified position.
+    /// </summary>
+    /// <param name="_position">The position of the cell.</param>
     public void RemoveCell(int3 _position)
     {
         if (cellStates.ContainsKey(_position))
@@ -58,11 +76,21 @@ public class Grid
         }
     }
 
+    /// <summary>
+    /// Determines whether the cell at the specified position is alive.
+    /// </summary>
+    /// <param name="_position">The position of the cell.</param>
+    /// <returns><c>true</c> if the cell is alive; otherwise, <c>false</c>.</returns>
     public bool IsAlive(int3 _position)
     {
         return IsWithinBounds(_position) && cellStates.TryGetValue(_position, out byte state) && state == CellState.Alive;
     }
 
+    /// <summary>
+    /// Counts the number of alive neighbors for the cell at the specified position.
+    /// </summary>
+    /// <param name="_position">The position of the cell.</param>
+    /// <returns>The number of alive neighbors.</returns>
     public int CountAliveNeighbors(int3 _position)
     {
         return neighborOffsets.Count(offset =>
@@ -72,11 +100,19 @@ public class Grid
         });
     }
 
+    /// <summary>
+    /// Gets all the active cells in the grid.
+    /// </summary>
+    /// <returns>An enumerable collection of active cells.</returns>
     public IEnumerable<Cell> GetActiveCells()
     {
         return cellStates.Select(kvp => new Cell(kvp.Key, kvp.Value));
     }
 
+    /// <summary>
+    /// Resizes the grid to the specified size.
+    /// </summary>
+    /// <param name="_newSize">The new size of the grid.</param>
     public void Resize(int _newSize)
     {
         gridSize = _newSize;
@@ -89,6 +125,11 @@ public class Grid
         }
     }
 
+    /// <summary>
+    /// Gets the name of the state from its value.
+    /// </summary>
+    /// <param name="_state">The value of the state.</param>
+    /// <returns>The name of the state.</returns>
     public string GetStateNameFromValue(byte _state)
     {
         return _state switch
@@ -102,6 +143,10 @@ public class Grid
     #endregion
 
     #region Private Methods
+    /// <summary>
+    /// Updates the active area around the specified position.
+    /// </summary>
+    /// <param name="_position">The position to update.</param>
     private void UpdateActiveArea(int3 _position)
     {
         foreach (var offset in neighborOffsets)
@@ -115,6 +160,10 @@ public class Grid
         }
     }
 
+    /// <summary>
+    /// Updates the inactive area around the specified position.
+    /// </summary>
+    /// <param name="_position">The position to update.</param>
     private void UpdateInactiveArea(int3 _position)
     {
         foreach (var offset in neighborOffsets)
@@ -144,6 +193,11 @@ public class Grid
         }
     }
 
+    /// <summary>
+    /// Checks if the specified position is within the bounds of the grid.
+    /// </summary>
+    /// <param name="_position">The position to check.</param>
+    /// <returns><c>true</c> if the position is within the bounds of the grid; otherwise, <c>false</c>.</returns>
     private bool IsWithinBounds(int3 _position)
     {
         return _position.x >= 0 && _position.x < gridSize &&

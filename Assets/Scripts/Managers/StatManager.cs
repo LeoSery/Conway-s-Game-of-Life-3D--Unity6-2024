@@ -30,11 +30,19 @@ public class StatManager : MonoBehaviour
     public float CurrentFPS => currentFPS;
 
     public int DeadCells => Mathf.Max(0, totalCells - aliveCells);
+
+    private float minFPS = float.MaxValue;
+    public float MinFPS => minFPS;
+
+    private float maxFPS = 0f;
+    public float MaxFPS => maxFPS;
+
+    private int dropCount = 0;
+    public int DropCount => dropCount;
+
     #endregion
 
     #region Private Fields
-    private readonly float fpsUpdateInterval = 0.5f;
-    private float fpsTimer = 0f;
     private bool isPaused = true;
     #endregion
 
@@ -102,7 +110,6 @@ public class StatManager : MonoBehaviour
         totalCells = GetTotalCells();
         simulationTime = 0f;
         currentFPS = 0f;
-        fpsTimer = 0f;
 
         OnStatsUpdate?.Invoke();
     }
@@ -119,12 +126,15 @@ public class StatManager : MonoBehaviour
 
     private void UpdateFPS()
     {
-        fpsTimer += Time.unscaledDeltaTime;
+        float currentFPS = 1f / Time.unscaledDeltaTime;
+        this.currentFPS = currentFPS;
 
-        if (fpsTimer >= fpsUpdateInterval)
+        minFPS = Mathf.Min(minFPS, currentFPS);
+        maxFPS = Mathf.Max(maxFPS, currentFPS);
+
+        if (currentFPS < 60)
         {
-            currentFPS = 1f / Time.unscaledDeltaTime;
-            fpsTimer = 0f;
+            dropCount++;
         }
     }
 

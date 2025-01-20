@@ -41,6 +41,9 @@ public class UIManager : MonoBehaviour
     private StatManager statManager;
     private GameManager gameManager;
     private CameraController cameraController;
+
+    private float fpsUpdateInterval = 0.3f;
+    private float timeSinceLastFpsUpdate = 0f;
     #endregion
 
     #region Unity Lifecycle Methods
@@ -94,7 +97,13 @@ public class UIManager : MonoBehaviour
         if (statManager != null)
         {
             simulationTimeText.text = $"Simulation time : {statManager.SimulationTime:F2}s";
-            fpsText.text = $"FPS : {statManager.CurrentFPS:F2}";
+
+            timeSinceLastFpsUpdate += Time.deltaTime;
+            if (timeSinceLastFpsUpdate >= fpsUpdateInterval)
+            {
+                fpsText.text = $"FPS : {statManager.CurrentFPS:F2}";
+                timeSinceLastFpsUpdate = 0f;
+            }
         }
     }
 
@@ -164,7 +173,7 @@ public class UIManager : MonoBehaviour
     private void OnCycleSpeedChanged(float _value)
     {
         UpdateCycleSpeedText(_value);
-        gameManager.UpdateInterval = _value;
+        gameManager.UpdateInterval = 1 / _value;
     }
 
     private void OnStatsUpdateChanged()

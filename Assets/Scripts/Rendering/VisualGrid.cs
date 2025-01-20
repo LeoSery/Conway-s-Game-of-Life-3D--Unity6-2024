@@ -4,15 +4,12 @@ using UnityEngine;
 
 public class VisualGrid : MonoBehaviour
 {
-    #region Public Fields
     [Header("Settings :")]
     public Color gridColor = new(0.5f, 0.5f, 0.5f, 0.2f);
     public Color highlightColor = Color.yellow;
     public float gridLineWidth = 0.02f;
     public float highlightLineWidth = 0.04f;
-    #endregion
 
-    #region Private Fields
     private int gridSize;
     private float cellSize;
     private Vector3 gridOffset;
@@ -22,20 +19,42 @@ public class VisualGrid : MonoBehaviour
     private readonly List<List<LineRenderer>> layerLines = new();
     private readonly List<LineRenderer> verticalLines = new();
 
+    /// <summary>
+    /// Represents the edges of a cube, where each pair of integers represents
+    /// the indices of the vertices that are connected by an edge.
+    /// </summary>
+    /// <remarks>
+    /// The cube vertices are numbered as follows:
+    /// 
+    ///        3 -------- 2
+    ///       /|         /|
+    ///      / |        / |
+    ///     7 -------- 6  |
+    ///     |  |       |  |
+    ///     |  0 ------|- 1
+    ///     | /        | /
+    ///     |/         |/
+    ///     4 -------- 5
+    ///
+    /// </remarks>
     private static readonly int[,] CubeEdges = new int[,]
     {
-            {0, 1}, {1, 4}, {4, 2},
-            {2, 0}, {0, 3}, {1, 5},
-            {4, 7}, {2, 6}, {3, 5},
-            {5, 7}, {7, 6}, {6, 3}
+        {0, 1}, {1, 4}, {4, 2},
+        {2, 0}, {0, 3}, {1, 5},
+        {4, 7}, {2, 6}, {3, 5},
+        {5, 7}, {7, 6}, {6, 3}
     };
-    #endregion
 
-    #region Properties
+    /// <summary>
+    /// The number of visible layers in the grid.
+    /// </summary>
     public int VisibleLayers { get; private set; }
-    #endregion
 
-    #region Public Methods
+    /// <summary>
+    /// Initializes the visual grid with the specified size and cell size.
+    /// </summary>
+    /// <param name="_size">The size of the grid.</param>
+    /// <param name="_cellSize">The size of each cell.</param>
     public void Initialize(int _size, float _cellSize)
     {
         gridSize = _size;
@@ -44,6 +63,11 @@ public class VisualGrid : MonoBehaviour
         CreateHighlightLines();
     }
 
+    /// <summary>
+    /// Updates the size and cell size of the visual grid.
+    /// </summary>
+    /// <param name="_newSize">The new size of the grid.</param>
+    /// <param name="_newCellSize">The new size of each cell.</param>
     public void UpdateGridSize(int _newSize, float _newCellSize)
     {
         gridSize = _newSize;
@@ -52,6 +76,10 @@ public class VisualGrid : MonoBehaviour
         CreateHighlightLines();
     }
 
+    /// <summary>
+    /// Highlights the cell at the specified position.
+    /// </summary>
+    /// <param name="_cellPosition">The position of the cell to highlight.</param>
     public void HighlightCell(Vector3Int _cellPosition)
     {
         Vector3 start = new Vector3(_cellPosition.x, _cellPosition.y, _cellPosition.z) * cellSize - gridOffset;
@@ -78,6 +106,9 @@ public class VisualGrid : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Unhighlights the currently highlighted cell.
+    /// </summary>
     public void UnhighlightCell()
     {
         foreach (var lr in highlightLines)
@@ -86,6 +117,9 @@ public class VisualGrid : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Shows the next layer of the grid.
+    /// </summary>
     public void ShowLayer()
     {
         if (VisibleLayers < gridSize + 1)
@@ -95,6 +129,9 @@ public class VisualGrid : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Hides the top layer of the grid.
+    /// </summary>
     public void HideLayer()
     {
         if (VisibleLayers > 2)
@@ -103,9 +140,10 @@ public class VisualGrid : MonoBehaviour
             UpdateVisibleLayers();
         }
     }
-    #endregion
 
-    #region Private Methods
+    /// <summary>
+    /// Creates the grid lines for the visual grid.
+    /// </summary>
     private void CreateGrid()
     {
         ClearExistingLines(gridLines);
@@ -123,16 +161,13 @@ public class VisualGrid : MonoBehaviour
                 float pos = i * cellSize;
 
                 // X direction
-                currentLayerLines.Add(CreateGridLine(new Vector3(0, y * cellSize, pos) - gridOffset,
-                                       new Vector3(gridSize * cellSize, y * cellSize, pos) - gridOffset));
+                currentLayerLines.Add(CreateGridLine(new Vector3(0, y * cellSize, pos) - gridOffset, new Vector3(gridSize * cellSize, y * cellSize, pos) - gridOffset));
 
                 // Y direction
-                verticalLines.Add(CreateGridLine(new Vector3(y * cellSize, 0, i * cellSize) - gridOffset,
-                   new Vector3(y * cellSize, gridSize * cellSize, i * cellSize) - gridOffset));
+                verticalLines.Add(CreateGridLine(new Vector3(y * cellSize, 0, i * cellSize) - gridOffset, new Vector3(y * cellSize, gridSize * cellSize, i * cellSize) - gridOffset));
 
                 // Z direction
-                currentLayerLines.Add(CreateGridLine(new Vector3(pos, y * cellSize, 0) - gridOffset,
-                                       new Vector3(pos, y * cellSize, gridSize * cellSize) - gridOffset));
+                currentLayerLines.Add(CreateGridLine(new Vector3(pos, y * cellSize, 0) - gridOffset, new Vector3(pos, y * cellSize, gridSize * cellSize) - gridOffset));
             }
 
             layerLines.Add(currentLayerLines);
@@ -142,6 +177,9 @@ public class VisualGrid : MonoBehaviour
         UpdateVisibleLayers();
     }
 
+    /// <summary>
+    /// Creates the highlight lines for the visual grid.
+    /// </summary>
     private void CreateHighlightLines()
     {
         ClearExistingLines(highlightLines);
@@ -154,11 +192,26 @@ public class VisualGrid : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Creates a grid line for the visual grid.
+    /// </summary>
+    /// <param name="_start">The start position of the line.</param>
+    /// <param name="_end">The end position of the line.</param>
+    /// <returns>The created LineRenderer component.</returns>
     private LineRenderer CreateGridLine(Vector3 _start, Vector3 _end)
     {
         return CreateLine(_start, _end, gridColor, gridLineWidth, gridLines);
     }
 
+    /// <summary>
+    /// Creates a line for the visual grid.
+    /// </summary>
+    /// <param name="_start">The start position of the line.</param>
+    /// <param name="_end">The end position of the line.</param>
+    /// <param name="_color">The color of the line.</param>
+    /// <param name="_width">The width of the line.</param>
+    /// <param name="_lineList">The list to add the LineRenderer component to.</param>
+    /// <returns>The created LineRenderer component.</returns>
     private LineRenderer CreateLine(Vector3 _start, Vector3 _end, Color _color, float _width, List<LineRenderer> _lineList = null)
     {
         GameObject lineObj = new("GridLine");
@@ -177,6 +230,10 @@ public class VisualGrid : MonoBehaviour
         return lr;
     }
 
+    /// <summary>
+    /// Clears the existing grid lines.
+    /// </summary>
+    /// <param name="_lines">The list of LineRenderer components to clear.</param>
     private void ClearExistingLines(List<LineRenderer> _lines)
     {
         foreach (var lr in _lines)
@@ -189,6 +246,9 @@ public class VisualGrid : MonoBehaviour
         _lines.Clear();
     }
 
+    /// <summary>
+    /// Updates the visibility of the grid layers based on the VisibleLayers property.
+    /// </summary>
     private void UpdateVisibleLayers()
     {
         for (int y = 0; y < layerLines.Count; y++)
@@ -201,7 +261,7 @@ public class VisualGrid : MonoBehaviour
             }
         }
 
-        float visibleHeight = (VisibleLayers  - 1) * cellSize;
+        float visibleHeight = (VisibleLayers - 1) * cellSize;
 
         foreach (var line in verticalLines)
         {
@@ -215,5 +275,4 @@ public class VisualGrid : MonoBehaviour
             line.SetPosition(1, endPos);
         }
     }
-    #endregion
 }

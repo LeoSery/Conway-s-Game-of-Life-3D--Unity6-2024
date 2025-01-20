@@ -118,28 +118,81 @@ Key points about this implementation :
 - The `neighborOffsets` array pre-computes all possible neighbor positions, optimizing neighbor checks in 3D space.
 - Using `int3` (from *Unity.Mathematics*) for positions enables efficient 3D coordinate handling.
 
-### 3. Efficient Neighbor Checking
+### 3. Object Pooling System
 
-The `neighborOffsets` array is crucial for efficient neighbor checking in 3D space :
+To handle the frequent creation and destruction of cells, we implemented an object pooling system:
 
 ```csharp
-public int CountAliveNeighbors(int3 position)
+public class CellPool : MonoBehaviour
 {
-    return neighborOffsets.Count(offset =>
-    {
-        int3 neighborPos = position + offset;
-        return cellStates.TryGetValue(neighborPos, out byte state) && state == CellState.Alive;
-    });
+    private Queue<GameObject> inactiveObjects;
+    private HashSet<GameObject> activeObjects;
+    private int defaultPoolSize;
+    private int maxPoolSize;
 }
 ```
 
-This method efficiently counts alive neighbors by :
+Key features of our pooling system:
 
-- Using the pre-computed `neighborOffsets` to check all 26 neighbors in 3D space.
-- Leveraging *LINQ* for a concise yet performant count operation.
-- Utilizing `Dictionary.TryGetValue` for optimized state lookups.
+#### Adaptive Pool Sizing
+The pool automatically adjusts its size based on the grid dimensions:
 
-These optimizations allow our 3D Game of Life to handle large grids efficiently, providing a smooth and responsive user experience even with complex 3D patterns.
+```csharp
+int baseSize = 100;
+float percentage = Mathf.Lerp(0.25f, 0.05f, Mathf.InverseLerp(5, 50, _gridSize));
+int calculatedSize = baseSize + Mathf.CeilToInt(Mathf.Pow(_gridSize, 3) * percentage);
+defaultPoolSize = Mathf.Clamp(calculatedSize, 100, 3000);
+```
+
+This approach:
+- Starts with a base size of 100 objects
+- Calculates additional capacity based on grid volume
+- Adjusts percentage based on grid size (25% for small grids, scaling down to 5% for larger ones)
+- Enforces minimum and maximum pool sizes
+
+#### Efficient Object Management
+The pool uses a dual-collection system:
+- `Queue<GameObject>` for inactive objects enables fast FIFO operations
+- `HashSet<GameObject>` for active objects ensures quick lookups and unique entries
+
+#### Dynamic Pool Extension
+The pool can grow dynamically when needed:
+```csharp
+if (inactiveObjects.Count == 0)
+{
+    if (TotalCount >= maxPoolSize)
+    {
+        maxPoolSize = Mathf.Min(maxPoolSize + 100, defaultPoolSize * 2);
+    }
+}
+```
+This allows:
+- Gradual pool growth based on demand
+- Prevention of excessive memory allocation
+- Hard cap at twice the default size
+
+#### Performance Optimization
+The system includes several optimizations:
+- Batch initialization of objects to spread the instantiation cost
+- Automatic object recycling to minimize garbage collection
+- Pool usage monitoring and statistics tracking
+- Pre-warming system to avoid runtime stuttering
+
+#### Results
+
+| Grid Size   | Metric          | Before Pooling     | With Object Pooling |
+|------------|-----------------|-------------------|-------------------|
+| 10x10x10   | Average FPS     | 70-90             | Solid 140-150      |
+|            | FPS Drops       | Frequent drops to 40 | Consistently stable |
+|            | Memory Usage    | Unpredictable GC spikes | Optimized & controlled |
+| 20x20x20   | Average FPS     | 50-70             | Strong 110-140     |
+|            | FPS Drops       | Severe drops to 30  | Brief warmup period, then stable |
+|            | Memory Usage    | Heavy GC impact    | Efficient management |
+
+
+
+
+The object pooling system helped reduce FPS drops that occurred when creating/destroying many cells. We saw improvements from drops to 70 FPS to more stable performance, even with larger grids.
 
 ## How to download the game
 

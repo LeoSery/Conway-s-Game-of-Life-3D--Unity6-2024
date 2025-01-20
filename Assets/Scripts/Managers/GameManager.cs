@@ -36,6 +36,7 @@ public class GameManager : MonoBehaviour
     public VisualGrid visualGrid;
     public CellInteractionController cellInteractionController;
     public CameraController CameraController;
+    public CellPool cellPool;
 
     private Dictionary<int3, GameObject> cellObjects;
     private float lastUpdateTime;
@@ -58,6 +59,7 @@ public class GameManager : MonoBehaviour
         {
             Instance = this;
             DontDestroyOnLoad(gameObject);
+            CalculateAndSetPoolSize(gridSize);
             InitializeGrid();
         }
         else
@@ -78,10 +80,15 @@ public class GameManager : MonoBehaviour
 
     private void Update()
     {
-        if (!isPaused && Time.time - lastUpdateTime >= UpdateInterval)
+        if (!isPaused)
         {
-            UpdateGrid();
-            lastUpdateTime = Time.time;
+            float timeSinceLastUpdate = Time.time - lastUpdateTime;
+            if (timeSinceLastUpdate >= UpdateInterval)
+            {
+                Debug.Log($"Cycle Update - Interval: {UpdateInterval}, Time since last: {timeSinceLastUpdate}");
+                UpdateGrid();
+                lastUpdateTime = Time.time;
+            }
         }
     }
     #endregion
@@ -91,6 +98,7 @@ public class GameManager : MonoBehaviour
     {
         gridSize = _newSize;
         Grid.Resize(_newSize);
+        CalculateAndSetPoolSize(_newSize);
 
         if (visualGrid != null)
         {
@@ -129,15 +137,9 @@ public class GameManager : MonoBehaviour
 
     public void ResetGrid()
     {
-        // Destroy all existing cell objects
-        foreach (var cellObject in cellObjects.Values)
-        {
-            Destroy(cellObject);
-        }
-
+        cellPool.ReturnAllObjects();
         cellObjects.Clear();
 
-        // Reset the grid
         Grid = new Grid(gridSize);
         InitializeGrid();
 
@@ -148,14 +150,16 @@ public class GameManager : MonoBehaviour
 
     public void IncreaseSpeed()
     {
+        float oldInterval = UpdateInterval;
         UpdateInterval -= 0.1f;
-        Debug.Log($"Speed Increased. New interval: {UpdateInterval}");
+        Debug.Log($"Speed Increased - Old: {oldInterval}, New: {UpdateInterval}");
     }
 
     public void DecreaseSpeed()
     {
+        float oldInterval = UpdateInterval;
         UpdateInterval += 0.1f;
-        Debug.Log($"Speed Decreased. New interval: {UpdateInterval}");
+        Debug.Log($"Speed Decreased - Old: {oldInterval}, New: {UpdateInterval}");
     }
     #endregion
 
@@ -200,42 +204,45 @@ public class GameManager : MonoBehaviour
 
     private void UpdateGrid()
     {
-        var newStates = new Dictionary<int3, byte>();
-        int aliveBefore = Grid.GetActiveCells().Count(c => c.State == CellState.Alive);
+        var cellsToUpdate = Grid.GetActiveCells().ToList();
 
-        foreach (var cell in Grid.GetActiveCells())
+        foreach (var cell in cellsToUpdate)
         {
             if (cell.State == CellState.Alive || cell.State == CellState.ActiveZone)
             {
-                int aliveNeighbors = Grid.CountAliveNeighbors(cell.Position);
+                int3 position = cell.Position;
+                int aliveNeighbors = Grid.CountAliveNeighbors(position);
                 byte newState = DetermineNewState(cell.State, aliveNeighbors);
-                newStates[cell.Position] = newState;
-            }
-        }
 
-        // Apply new states and update rendering
-        foreach (var kvp in newStates)
-        {
-            if (kvp.Value == CellState.Alive)
-            {
-                Grid.SetAlive(kvp.Key);
-
-                if (!cellObjects.ContainsKey(kvp.Key))
+                if (newState != cell.State)
                 {
-                    CreateCellObject(kvp.Key);
-                }
-            }
-            else
-            {
-                Grid.RemoveCell(kvp.Key);
+                    if (newState == CellState.Alive)
+                    {
+                        Grid.SetAlive(position);
 
-                if (cellObjects.ContainsKey(kvp.Key))
-                {
-                    DestroyCellObject(kvp.Key);
+                        if (!cellObjects.ContainsKey(position))
+                        {
+                            CreateCellObject(position);
+                        }
+                    }
+                    else
+                    {
+                        Grid.RemoveCell(position);
+                        if (cellObjects.ContainsKey(position))
+                        {
+                            DestroyCellObject(position);
+                        }
+                    }
                 }
             }
         }
+
         OnCycleComplete?.Invoke();
+    }
+
+    private void CalculateAndSetPoolSize(int _gridSize)
+    {
+        cellPool.Initialize(cellPrefab, cellContainer, _gridSize);
     }
 
     private byte DetermineNewState(byte _currentState, int _aliveNeighbors)
@@ -254,7 +261,7 @@ public class GameManager : MonoBehaviour
 
     private void CreateCellObject(int3 _position)
     {
-        if (!cellObjects.ContainsKey(_position))
+        if (!cellObjects.ContainsKey(_position) && cellPool.IsReady)
         {
             Vector3 worldPosition = new Vector3(
                 _position.x - (gridSize - 1) / 2f,
@@ -262,16 +269,19 @@ public class GameManager : MonoBehaviour
                 _position.z - (gridSize - 1) / 2f
             ) * CELL_SIZE;
 
-            GameObject cellObject = Instantiate(cellPrefab, worldPosition, Quaternion.identity, cellContainer);
-            cellObjects[_position] = cellObject;
+            GameObject cellObject = cellPool.GetObject(worldPosition);
+            if (cellObject != null)
+            {
+                cellObjects[_position] = cellObject;
+            }
         }
     }
 
     private void DestroyCellObject(int3 _position)
     {
-        if (cellObjects.TryGetValue(_position, out GameObject cellObject))
+        if (cellObjects.TryGetValue(_position, out GameObject cellObject) && cellPool.IsReady)
         {
-            Destroy(cellObject);
+            cellPool.ReturnObject(cellObject);
             cellObjects.Remove(_position);
         }
     }

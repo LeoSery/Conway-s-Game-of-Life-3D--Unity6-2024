@@ -288,7 +288,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   updateInterval: 2
-  gridSize: 10
+  gridSize: 25
   minGridSize: 5
   maxGridSize: 50
   minCycleSpeed: 0.1
@@ -1816,7 +1816,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: 'Conway''s Game of life 3D - V0.31 - GitHub : @LeoSery'
+  m_text: 'Conway''s Game of life 3D - V0.32 - GitHub : @LeoSery'
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}

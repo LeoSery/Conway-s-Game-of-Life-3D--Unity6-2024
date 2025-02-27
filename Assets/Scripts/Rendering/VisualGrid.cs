@@ -55,7 +55,7 @@ public class VisualGrid : MonoBehaviour
     /// <summary>
     /// Le nombre total de couches dans la grille.
     /// </summary>
-    public int TotalLayers => gridSize;
+    public int VisibleLayers => gridSize;
 
     /// <summary>
     /// Initializes the visual grid with the specified size and cell size.
@@ -204,46 +204,80 @@ public class VisualGrid : MonoBehaviour
 
         gridOffset = new Vector3(gridSize / 2f, gridSize / 2f, gridSize / 2f) * cellSize;
 
-        // Créer une grille de cubes pour chaque couche
+        // Créer une grille optimisée pour chaque couche
         for (int y = 0; y < gridSize; y++)
         {
             List<LineRenderer> layerLines = new();
             float yPos = y * cellSize;
+            float yPosTop = (y + 1) * cellSize;
 
-            // Pour chaque cellule dans cette couche
-            for (int z = 0; z < gridSize; z++)
+            // 1. Créer le quadrillage inférieur (selon X et Z)
+            for (int z = 0; z <= gridSize; z++)
             {
-                for (int x = 0; x < gridSize; x++)
+                float zPos = z * cellSize;
+                // Lignes horizontales selon X (bas)
+                LineRenderer lineX = CreateLine(
+                    new Vector3(0, yPos, zPos) - gridOffset,
+                    new Vector3(gridSize * cellSize, yPos, zPos) - gridOffset,
+                    gridColor,
+                    gridLineWidth
+                );
+                layerLines.Add(lineX);
+
+                // Lignes horizontales selon X (haut) - seulement si nous ne sommes pas au dernier étage
+                LineRenderer lineXTop = CreateLine(
+                    new Vector3(0, yPosTop, zPos) - gridOffset,
+                    new Vector3(gridSize * cellSize, yPosTop, zPos) - gridOffset,
+                    gridColor,
+                    gridLineWidth
+                );
+                layerLines.Add(lineXTop);
+            }
+
+            // 2. Lignes selon Z
+            for (int x = 0; x <= gridSize; x++)
+            {
+                float xPos = x * cellSize;
+                // Lignes horizontales selon Z (bas)
+                LineRenderer lineZ = CreateLine(
+                    new Vector3(xPos, yPos, 0) - gridOffset,
+                    new Vector3(xPos, yPos, gridSize * cellSize) - gridOffset,
+                    gridColor,
+                    gridLineWidth
+                );
+                layerLines.Add(lineZ);
+
+                // Lignes horizontales selon Z (haut)
+                LineRenderer lineZTop = CreateLine(
+                    new Vector3(xPos, yPosTop, 0) - gridOffset,
+                    new Vector3(xPos, yPos + cellSize, gridSize * cellSize) - gridOffset,
+                    gridColor,
+                    gridLineWidth
+                );
+                layerLines.Add(lineZTop);
+            }
+
+            // 3. Lignes verticales entre les deux quadrillages
+            for (int z = 0; z <= gridSize; z++)
+            {
+                for (int x = 0; x <= gridSize; x++)
                 {
-                    // Créer un cube pour chaque cellule
-                    Vector3 cellStart = new Vector3(x * cellSize, yPos, z * cellSize) - gridOffset;
-
-                    // Les 8 sommets du cube de la cellule
-                    Vector3[] corners = new Vector3[]
-                    {
-                        cellStart,
-                        new Vector3(cellStart.x + cellSize, cellStart.y, cellStart.z),
-                        new Vector3(cellStart.x + cellSize, cellStart.y, cellStart.z + cellSize),
-                        new Vector3(cellStart.x, cellStart.y, cellStart.z + cellSize),
-                        new Vector3(cellStart.x, cellStart.y + cellSize, cellStart.z),
-                        new Vector3(cellStart.x + cellSize, cellStart.y + cellSize, cellStart.z),
-                        new Vector3(cellStart.x + cellSize, cellStart.y + cellSize, cellStart.z + cellSize),
-                        new Vector3(cellStart.x, cellStart.y + cellSize, cellStart.z + cellSize)
-                    };
-
-                    // Dessiner les 12 arêtes du cube
-                    for (int i = 0; i < 12; i++)
-                    {
-                        LineRenderer lr = CreateLine(
-                            corners[CubeEdges[i, 0]],
-                            corners[CubeEdges[i, 1]],
-                            gridColor,
-                            gridLineWidth
-                        );
-                        lr.gameObject.SetActive(false); // Désactivé par défaut
-                        layerLines.Add(lr);
-                    }
+                    float xPos = x * cellSize;
+                    float zPos = z * cellSize;
+                    LineRenderer lineY = CreateLine(
+                        new Vector3(xPos, yPos, zPos) - gridOffset,
+                        new Vector3(xPos, yPosTop, zPos) - gridOffset,
+                        gridColor,
+                        gridLineWidth
+                    );
+                    layerLines.Add(lineY);
                 }
+            }
+
+            // Désactiver toutes les lignes par défaut
+            foreach (var line in layerLines)
+            {
+                line.gameObject.SetActive(false);
             }
 
             layerGrids.Add(layerLines);
@@ -265,17 +299,6 @@ public class VisualGrid : MonoBehaviour
             lr.gameObject.SetActive(false);
             highlightLines.Add(lr);
         }
-    }
-
-    /// <summary>
-    /// Creates a grid line for the visual grid.
-    /// </summary>
-    /// <param name="_start">The start position of the line.</param>
-    /// <param name="_end">The end position of the line.</param>
-    /// <returns>The created LineRenderer component.</returns>
-    private LineRenderer CreateGridLine(Vector3 _start, Vector3 _end)
-    {
-        return CreateLine(_start, _end, gridColor, gridLineWidth, gridLines);
     }
 
     /// <summary>

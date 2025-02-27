@@ -1281,9 +1281,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a3a1a30181207a74190cad0474bdad24, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  gridColor: {r: 0.89433956, g: 0.24805266, b: 0.24805266, a: 1}
+  gridColor: {r: 1, g: 1, b: 1, a: 1}
+  boundingBoxColor: {r: 1, g: 1, b: 1, a: 0.8}
   highlightColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
   gridLineWidth: 0.02
+  boundingBoxLineWidth: 0.03
   highlightLineWidth: 0.04
 --- !u!1 &575659045
 GameObject:
@@ -1814,7 +1816,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: 'Conway''s Game of life 3D - V0.20 - GitHub : @LeoSery'
+  m_text: 'Conway''s Game of life 3D - V0.31 - GitHub : @LeoSery'
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
@@ -2377,8 +2379,8 @@ Camera:
   m_GameObject: {fileID: 963194225}
   m_Enabled: 1
   serializedVersion: 2
-  m_ClearFlags: 1
-  m_BackGroundColor: {r: 0.19215687, g: 0.3019608, b: 0.4745098, a: 0}
+  m_ClearFlags: 2
+  m_BackGroundColor: {r: 0, g: 0, b: 0, a: 0}
   m_projectionMatrixMode: 1
   m_GateFitMode: 2
   m_FOVAxisMode: 0
@@ -4462,6 +4464,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9487aafcc72bdd241ae0cc6b16cbad34, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  enableLogging: 0
 --- !u!1 &2069031811
 GameObject:
   m_ObjectHideFlags: 0

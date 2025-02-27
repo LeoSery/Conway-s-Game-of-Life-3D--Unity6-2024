@@ -6,8 +6,10 @@ public class VisualGrid : MonoBehaviour
 {
     [Header("Settings :")]
     public Color gridColor = new(0.5f, 0.5f, 0.5f, 0.2f);
+    public Color boundingBoxColor = new(1f, 0f, 0f, 0.8f); // Couleur du cube extérieur
     public Color highlightColor = Color.yellow;
     public float gridLineWidth = 0.02f;
+    public float boundingBoxLineWidth = 0.03f; // Épaisseur des lignes du cube extérieur
     public float highlightLineWidth = 0.04f;
 
     private int gridSize;
@@ -16,8 +18,9 @@ public class VisualGrid : MonoBehaviour
 
     private readonly List<LineRenderer> gridLines = new();
     private readonly List<LineRenderer> highlightLines = new();
-    private readonly List<List<LineRenderer>> layerLines = new();
-    private readonly List<LineRenderer> verticalLines = new();
+    private readonly List<LineRenderer> boundingBoxLines = new();
+    private readonly List<List<LineRenderer>> layerGrids = new();
+    private int currentVisibleLayer = 0;
 
     /// <summary>
     /// Represents the edges of a cube, where each pair of integers represents
@@ -39,16 +42,20 @@ public class VisualGrid : MonoBehaviour
     /// </remarks>
     private static readonly int[,] CubeEdges = new int[,]
     {
-        {0, 1}, {1, 4}, {4, 2},
-        {2, 0}, {0, 3}, {1, 5},
-        {4, 7}, {2, 6}, {3, 5},
-        {5, 7}, {7, 6}, {6, 3}
+        {0, 1}, {1, 2}, {2, 3}, {3, 0}, // Bord inférieur
+        {4, 5}, {5, 6}, {6, 7}, {7, 4}, // Bord supérieur
+        {0, 4}, {1, 5}, {2, 6}, {3, 7}  // Lignes verticales connectant les bords
     };
 
     /// <summary>
-    /// The number of visible layers in the grid.
+    /// L'index de la couche actuellement visible.
     /// </summary>
-    public int VisibleLayers { get; private set; }
+    public int CurrentVisibleLayer => currentVisibleLayer;
+
+    /// <summary>
+    /// Le nombre total de couches dans la grille.
+    /// </summary>
+    public int TotalLayers => gridSize;
 
     /// <summary>
     /// Initializes the visual grid with the specified size and cell size.
@@ -60,6 +67,7 @@ public class VisualGrid : MonoBehaviour
         gridSize = _size;
         cellSize = _cellSize;
         CreateGrid();
+        CreateBoundingBox();
         CreateHighlightLines();
     }
 
@@ -72,7 +80,9 @@ public class VisualGrid : MonoBehaviour
     {
         gridSize = _newSize;
         cellSize = _newCellSize;
+        currentVisibleLayer = 0;
         CreateGrid();
+        CreateBoundingBox();
         CreateHighlightLines();
     }
 
@@ -88,13 +98,13 @@ public class VisualGrid : MonoBehaviour
         Vector3[] positions = new Vector3[]
         {
             start,
-            new(end.x, start.y, start.z),
-            new(start.x, end.y, start.z),
-            new(start.x, start.y, end.z),
-            new(end.x, end.y, start.z),
-            new(end.x, start.y, end.z),
-            new(start.x, end.y, end.z),
-            end
+            new Vector3(start.x + cellSize, start.y, start.z),
+            new Vector3(start.x + cellSize, start.y, start.z + cellSize),
+            new Vector3(start.x, start.y, start.z + cellSize),
+            new Vector3(start.x, start.y + cellSize, start.z),
+            new Vector3(start.x + cellSize, start.y + cellSize, start.z),
+            new Vector3(start.x + cellSize, start.y + cellSize, start.z + cellSize),
+            new Vector3(start.x, start.y + cellSize, start.z + cellSize)
         };
 
         for (int i = 0; i < 12; i++)
@@ -122,9 +132,9 @@ public class VisualGrid : MonoBehaviour
     /// </summary>
     public void ShowLayer()
     {
-        if (VisibleLayers < gridSize + 1)
+        if (currentVisibleLayer < gridSize - 1)
         {
-            VisibleLayers++;
+            currentVisibleLayer++;
             UpdateVisibleLayers();
         }
     }
@@ -134,10 +144,43 @@ public class VisualGrid : MonoBehaviour
     /// </summary>
     public void HideLayer()
     {
-        if (VisibleLayers > 2)
+        if (currentVisibleLayer > 0)
         {
-            VisibleLayers--;
+            currentVisibleLayer--;
             UpdateVisibleLayers();
+        }
+    }
+
+    private void CreateBoundingBox()
+    {
+        ClearExistingLines(boundingBoxLines);
+
+        Vector3 min = Vector3.zero - gridOffset;
+        Vector3 max = new Vector3(gridSize, gridSize, gridSize) * cellSize - gridOffset;
+
+        // Les 8 sommets du cube
+        Vector3[] corners = new Vector3[]
+        {
+            new(min.x, min.y, min.z),
+            new(max.x, min.y, min.z),
+            new(max.x, min.y, max.z),
+            new(min.x, min.y, max.z),
+            new(min.x, max.y, min.z),
+            new(max.x, max.y, min.z),
+            new(max.x, max.y, max.z),
+            new(min.x, max.y, max.z)
+        };
+
+        // Créer les 12 arêtes du cube
+        for (int i = 0; i < 12; i++)
+        {
+            LineRenderer lr = CreateLine(
+                corners[CubeEdges[i, 0]],
+                corners[CubeEdges[i, 1]],
+                boundingBoxColor,
+                boundingBoxLineWidth,
+                boundingBoxLines
+            );
         }
     }
 
@@ -146,34 +189,66 @@ public class VisualGrid : MonoBehaviour
     /// </summary>
     private void CreateGrid()
     {
-        ClearExistingLines(gridLines);
-        layerLines.Clear();
-        verticalLines.Clear();
+        // Nettoyer les lignes existantes
+        foreach (var layer in layerGrids)
+        {
+            foreach (var line in layer)
+            {
+                if (line != null)
+                {
+                    Destroy(line.gameObject);
+                }
+            }
+        }
+        layerGrids.Clear();
 
         gridOffset = new Vector3(gridSize / 2f, gridSize / 2f, gridSize / 2f) * cellSize;
 
-        for (int y = 0; y <= gridSize; y++)
+        // Créer une grille de cubes pour chaque couche
+        for (int y = 0; y < gridSize; y++)
         {
-            List<LineRenderer> currentLayerLines = new();
+            List<LineRenderer> layerLines = new();
+            float yPos = y * cellSize;
 
-            for (int i = 0; i <= gridSize; i++)
+            // Pour chaque cellule dans cette couche
+            for (int z = 0; z < gridSize; z++)
             {
-                float pos = i * cellSize;
+                for (int x = 0; x < gridSize; x++)
+                {
+                    // Créer un cube pour chaque cellule
+                    Vector3 cellStart = new Vector3(x * cellSize, yPos, z * cellSize) - gridOffset;
 
-                // X direction
-                currentLayerLines.Add(CreateGridLine(new Vector3(0, y * cellSize, pos) - gridOffset, new Vector3(gridSize * cellSize, y * cellSize, pos) - gridOffset));
+                    // Les 8 sommets du cube de la cellule
+                    Vector3[] corners = new Vector3[]
+                    {
+                        cellStart,
+                        new Vector3(cellStart.x + cellSize, cellStart.y, cellStart.z),
+                        new Vector3(cellStart.x + cellSize, cellStart.y, cellStart.z + cellSize),
+                        new Vector3(cellStart.x, cellStart.y, cellStart.z + cellSize),
+                        new Vector3(cellStart.x, cellStart.y + cellSize, cellStart.z),
+                        new Vector3(cellStart.x + cellSize, cellStart.y + cellSize, cellStart.z),
+                        new Vector3(cellStart.x + cellSize, cellStart.y + cellSize, cellStart.z + cellSize),
+                        new Vector3(cellStart.x, cellStart.y + cellSize, cellStart.z + cellSize)
+                    };
 
-                // Y direction
-                verticalLines.Add(CreateGridLine(new Vector3(y * cellSize, 0, i * cellSize) - gridOffset, new Vector3(y * cellSize, gridSize * cellSize, i * cellSize) - gridOffset));
-
-                // Z direction
-                currentLayerLines.Add(CreateGridLine(new Vector3(pos, y * cellSize, 0) - gridOffset, new Vector3(pos, y * cellSize, gridSize * cellSize) - gridOffset));
+                    // Dessiner les 12 arêtes du cube
+                    for (int i = 0; i < 12; i++)
+                    {
+                        LineRenderer lr = CreateLine(
+                            corners[CubeEdges[i, 0]],
+                            corners[CubeEdges[i, 1]],
+                            gridColor,
+                            gridLineWidth
+                        );
+                        lr.gameObject.SetActive(false); // Désactivé par défaut
+                        layerLines.Add(lr);
+                    }
+                }
             }
 
-            layerLines.Add(currentLayerLines);
+            layerGrids.Add(layerLines);
         }
 
-        VisibleLayers = gridSize + 1;
         UpdateVisibleLayers();
     }
 
@@ -251,28 +326,13 @@ public class VisualGrid : MonoBehaviour
     /// </summary>
     private void UpdateVisibleLayers()
     {
-        for (int y = 0; y < layerLines.Count; y++)
+        for (int y = 0; y < layerGrids.Count; y++)
         {
-            bool isVisible = y < VisibleLayers;
-
-            foreach (var line in layerLines[y])
+            bool isVisible = y == currentVisibleLayer;
+            foreach (var line in layerGrids[y])
             {
                 line.gameObject.SetActive(isVisible);
             }
-        }
-
-        float visibleHeight = (VisibleLayers - 1) * cellSize;
-
-        foreach (var line in verticalLines)
-        {
-            Vector3 startPos = line.GetPosition(0);
-            Vector3 endPos = line.GetPosition(1);
-
-            endPos.y = gridSize * cellSize - gridOffset.y;
-            endPos.y = Mathf.Min(endPos.y, visibleHeight - gridOffset.y);
-
-            line.SetPosition(0, startPos);
-            line.SetPosition(1, endPos);
         }
     }
 }

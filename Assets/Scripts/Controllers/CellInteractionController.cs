@@ -3,6 +3,7 @@ using System.Collections;
 using UnityEngine;
 
 using Unity.Mathematics;
+using System.Runtime.CompilerServices;
 
 public class CellInteractionController : MonoBehaviour
 {
@@ -140,8 +141,15 @@ public class CellInteractionController : MonoBehaviour
 
     private Vector3Int? FindTargetCell(Ray _ray)
     {
+        int gridSize = GameManager.Instance.gridSize;
+        int cellSize = GameManager.Instance.CellSize;
+
         Vector3 gridMin = gridOffset;
-        Vector3 gridMax = -gridOffset;
+        Vector3 gridMax = new Vector3(
+            gridSize * cellSize,
+            gridSize * cellSize,
+            gridSize * cellSize
+        ) - gridOffset;
 
         if (IntersectRayBox(_ray, gridMin, gridMax, out float tMin, out float tMax))
         {
@@ -158,18 +166,7 @@ public class CellInteractionController : MonoBehaviour
 
                 if (IsValidCell(cell))
                 {
-                    if (visualGrid.VisibleLayers == 1)
-                    {
-                        if (cell.y == 0)
-                        {
-                            return new Vector3Int(cell.x, cell.y, cell.z);
-                        }
-                        else
-                        {
-                            return null;
-                        }
-                    }
-                    else if (cell.y < visualGrid.VisibleLayers)
+                    if (cell.y == visualGrid.CurrentVisibleLayer)
                     {
                         return new Vector3Int(cell.x, cell.y, cell.z);
                     }

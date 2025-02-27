@@ -41,6 +41,7 @@ public class GameManager : MonoBehaviour
     private Dictionary<int3, GameObject> cellObjects;
     private float lastUpdateTime;
     private const int CELL_SIZE = 1;
+    public int CellSize => CELL_SIZE;
     private bool isPaused = true;
 
     public float UpdateInterval

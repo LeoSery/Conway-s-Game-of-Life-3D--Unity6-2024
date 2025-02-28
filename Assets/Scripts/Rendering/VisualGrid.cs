@@ -361,6 +361,8 @@ public class VisualGrid : MonoBehaviour
                 ShowGridLines(false);
             }
         }
+
+        GameManager.Instance.cellInteractionController.UpdateCellHighlight();
     }
 
     /// <summary>

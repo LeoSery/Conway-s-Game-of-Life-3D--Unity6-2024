@@ -59,6 +59,48 @@ public class CellInteractionController : MonoBehaviour
         visualGrid.HideLayer();
         UpdateCellHighlight();
     }
+
+    public void UpdateCellHighlight()
+    {
+        float currentTime = Time.time;
+        if (currentTime - lastUpdateTime < UPDATE_THROTTLE)
+        {
+            return;
+        }
+
+        lastUpdateTime = currentTime;
+
+        bool shouldHideHighlight = visualGrid.isSiulationRunning && visualGrid.HideGridOnSimulate;
+        if (shouldHideHighlight)
+        {
+            if (lastHighlightedCell.HasValue)
+            {
+                visualGrid.UnhighlightCell();
+                lastHighlightedCell = null;
+            }
+            return;
+        }
+
+        UpdateGridOffset();
+
+        Ray ray = mainCamera.ViewportPointToRay(cachedRayOrigin);
+        Vector3Int? targetCell = FindTargetCell(ray);
+
+        if (targetCell.HasValue)
+        {
+            if (!targetCell.Equals(lastHighlightedCell))
+            {
+                visualGrid.UnhighlightCell();
+                visualGrid.HighlightCell(targetCell.Value);
+                lastHighlightedCell = targetCell;
+            }
+        }
+        else if (lastHighlightedCell.HasValue)
+        {
+            visualGrid.UnhighlightCell();
+            lastHighlightedCell = null;
+        }
+    }
     #endregion
 
     #region Private Methods
@@ -129,35 +171,6 @@ public class CellInteractionController : MonoBehaviour
 
             InputManager.Instance.OnShowLayer -= ShowLayer;
             InputManager.Instance.OnHideLayer -= HideLayer;
-        }
-    }
-
-    private void UpdateCellHighlight()
-    {
-        float currentTime = Time.time;
-        if (currentTime - lastUpdateTime < UPDATE_THROTTLE)
-            return;
-
-        lastUpdateTime = currentTime;
-
-        UpdateGridOffset();
-
-        Ray ray = mainCamera.ViewportPointToRay(cachedRayOrigin);
-        Vector3Int? targetCell = FindTargetCell(ray);
-
-        if (targetCell.HasValue)
-        {
-            if (!targetCell.Equals(lastHighlightedCell))
-            {
-                visualGrid.UnhighlightCell();
-                visualGrid.HighlightCell(targetCell.Value);
-                lastHighlightedCell = targetCell;
-            }
-        }
-        else if (lastHighlightedCell.HasValue)
-        {
-            visualGrid.UnhighlightCell();
-            lastHighlightedCell = null;
         }
     }
 

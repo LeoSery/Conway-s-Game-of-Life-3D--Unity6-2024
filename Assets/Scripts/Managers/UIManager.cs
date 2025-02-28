@@ -27,6 +27,7 @@ public class UIManager : MonoBehaviour
     public GameObject layerPanel;
     public Button LayerUpButton;
     public Button LayerDownButton;
+    public Toggle LayerVisibilityToggle;
 
     [Header("Stats Panel :")]
     public TextMeshProUGUI cycleText;
@@ -81,6 +82,7 @@ public class UIManager : MonoBehaviour
 
         SetupButtonListeners();
         SetupConfigPanel();
+        SetupGridVisibilityToggle();
 
         UpdateEditPanelsVisibility(gameManager.IsPaused);
         UpdateStateButtonVisibility(gameManager.IsPaused);
@@ -160,6 +162,23 @@ public class UIManager : MonoBehaviour
         AssignButtonToAction(ResetButton, gameManager.ResetGrid);
         AssignButtonToAction(LayerUpButton, gameManager.cellInteractionController.ShowLayer);
         AssignButtonToAction(LayerDownButton, gameManager.cellInteractionController.HideLayer);
+    }
+
+    private void SetupGridVisibilityToggle()
+    {
+        if (LayerVisibilityToggle != null)
+        {
+            LayerVisibilityToggle.isOn = gameManager.visualGrid.HideGridOnSimulate;
+            LayerVisibilityToggle.onValueChanged.AddListener(OnHideGridToggleChanged);
+        }
+    }
+
+    private void OnHideGridToggleChanged(bool value)
+    {
+        if (gameManager.visualGrid != null)
+        {
+            gameManager.visualGrid.SetHideGridWhenPlaying(value);
+        }
     }
 
     private void OnGridSizeChanged(float _value)

@@ -17,6 +17,11 @@ public class CellInteractionController : MonoBehaviour
     private VisualGrid visualGrid;
     private Vector3 gridOffset;
     private Vector3Int? lastHighlightedCell;
+
+    private int lastGridSize = -1;
+    private Vector3 cachedRayOrigin = new(0.5f, 0.5f, 0);
+    private float lastUpdateTime = 0f;
+    private const float UPDATE_THROTTLE = 0.05f;
     #endregion
 
     #region Unity Lifecycle Methods
@@ -81,9 +86,20 @@ public class CellInteractionController : MonoBehaviour
 
     private void UpdateGridOffset()
     {
-        int gridSize = GameManager.Instance.gridSize;
-        float cellSize = GameManager.Instance.CellSize;
-        gridOffset = new Vector3(gridSize / 2f, gridSize / 2f, gridSize / 2f) * cellSize;
+        int currentGridSize = GameManager.Instance.gridSize;
+
+        if (currentGridSize != lastGridSize)
+        {
+            lastGridSize = currentGridSize;
+            float cellSize = GameManager.Instance.CellSize;
+            gridOffset.Set(
+                currentGridSize / 2f * cellSize,
+                currentGridSize / 2f * cellSize,
+                currentGridSize / 2f * cellSize
+            );
+
+            lastHighlightedCell = null;
+        }
     }
 
     private void SubscribeToEvents()
@@ -118,9 +134,15 @@ public class CellInteractionController : MonoBehaviour
 
     private void UpdateCellHighlight()
     {
+        float currentTime = Time.time;
+        if (currentTime - lastUpdateTime < UPDATE_THROTTLE)
+            return;
+
+        lastUpdateTime = currentTime;
+
         UpdateGridOffset();
 
-        Ray ray = mainCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0));
+        Ray ray = mainCamera.ViewportPointToRay(cachedRayOrigin);
         Vector3Int? targetCell = FindTargetCell(ray);
 
         if (targetCell.HasValue)
@@ -132,13 +154,10 @@ public class CellInteractionController : MonoBehaviour
                 lastHighlightedCell = targetCell;
             }
         }
-        else
+        else if (lastHighlightedCell.HasValue)
         {
-            if (lastHighlightedCell.HasValue)
-            {
-                visualGrid.UnhighlightCell();
-                lastHighlightedCell = null;
-            }
+            visualGrid.UnhighlightCell();
+            lastHighlightedCell = null;
         }
     }
 

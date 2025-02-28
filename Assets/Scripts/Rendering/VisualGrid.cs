@@ -6,21 +6,26 @@ public class VisualGrid : MonoBehaviour
 {
     [Header("Settings :")]
     public Color gridColor = new(0.5f, 0.5f, 0.5f, 0.2f);
-    public Color boundingBoxColor = new(1f, 0f, 0f, 0.8f); // Couleur du cube extérieur
+    public Color boundingBoxColor = new(1f, 0f, 0f, 0.8f);
     public Color highlightColor = Color.yellow;
+
     public float gridLineWidth = 0.02f;
-    public float boundingBoxLineWidth = 0.03f; // Épaisseur des lignes du cube extérieur
+    public float boundingBoxLineWidth = 0.03f;
     public float highlightLineWidth = 0.04f;
 
-    private int gridSize;
+    public bool HideGridOnSimulate = false;
+    public bool isSiulationRunning = false;
+
+    private int currentVisibleLayer = 0;
     private float cellSize;
+    private int gridSize;
+
     private Vector3 gridOffset;
 
     private readonly List<LineRenderer> gridLines = new();
     private readonly List<LineRenderer> highlightLines = new();
     private readonly List<LineRenderer> boundingBoxLines = new();
     private readonly List<List<LineRenderer>> layerGrids = new();
-    private int currentVisibleLayer = 0;
 
     /// <summary>
     /// Represents the edges of a cube, where each pair of integers represents
@@ -42,20 +47,30 @@ public class VisualGrid : MonoBehaviour
     /// </remarks>
     private static readonly int[,] CubeEdges = new int[,]
     {
-        {0, 1}, {1, 2}, {2, 3}, {3, 0}, // Bord inférieur
-        {4, 5}, {5, 6}, {6, 7}, {7, 4}, // Bord supérieur
-        {0, 4}, {1, 5}, {2, 6}, {3, 7}  // Lignes verticales connectant les bords
+        {0, 1}, {1, 2}, {2, 3}, {3, 0}, // Bottom edge
+        {4, 5}, {5, 6}, {6, 7}, {7, 4}, // Top edge
+        {0, 4}, {1, 5}, {2, 6}, {3, 7}  // Vertical lines connecting edges
     };
 
-    /// <summary>
-    /// L'index de la couche actuellement visible.
-    /// </summary>
     public int CurrentVisibleLayer => currentVisibleLayer;
+    public int VisibleLayers => gridSize;
+
 
     /// <summary>
-    /// Le nombre total de couches dans la grille.
+    /// Subscribes to the OnPauseStateChanged event when the object is enabled.
     /// </summary>
-    public int VisibleLayers => gridSize;
+    private void OnEnable()
+    {
+        GameManager.OnPauseStateChanged += HandlePauseStateChanged;
+    }
+
+    /// <summary>
+    /// Unsubscribes from the OnPauseStateChanged event when the object is disabled.
+    /// </summary>
+    private void OnDisable()
+    {
+        GameManager.OnPauseStateChanged -= HandlePauseStateChanged;
+    }
 
     /// <summary>
     /// Initializes the visual grid with the specified size and cell size.
@@ -98,13 +113,13 @@ public class VisualGrid : MonoBehaviour
         Vector3[] positions = new Vector3[]
         {
             start,
-            new Vector3(start.x + cellSize, start.y, start.z),
-            new Vector3(start.x + cellSize, start.y, start.z + cellSize),
-            new Vector3(start.x, start.y, start.z + cellSize),
-            new Vector3(start.x, start.y + cellSize, start.z),
-            new Vector3(start.x + cellSize, start.y + cellSize, start.z),
-            new Vector3(start.x + cellSize, start.y + cellSize, start.z + cellSize),
-            new Vector3(start.x, start.y + cellSize, start.z + cellSize)
+            new(start.x + cellSize, start.y, start.z),
+            new(start.x + cellSize, start.y, start.z + cellSize),
+            new(start.x, start.y, start.z + cellSize),
+            new(start.x, start.y + cellSize, start.z),
+            new(start.x + cellSize, start.y + cellSize, start.z),
+            new(start.x + cellSize, start.y + cellSize, start.z + cellSize),
+            new(start.x, start.y + cellSize, start.z + cellSize)
         };
 
         for (int i = 0; i < 12; i++)
@@ -132,10 +147,13 @@ public class VisualGrid : MonoBehaviour
     /// </summary>
     public void ShowLayer()
     {
-        if (currentVisibleLayer < gridSize - 1)
+        if (!isSiulationRunning || !HideGridOnSimulate)
         {
-            currentVisibleLayer++;
-            UpdateVisibleLayers();
+            if (currentVisibleLayer < gridSize - 1)
+            {
+                currentVisibleLayer++;
+                UpdateVisibleLayers();
+            }
         }
     }
 
@@ -144,13 +162,24 @@ public class VisualGrid : MonoBehaviour
     /// </summary>
     public void HideLayer()
     {
-        if (currentVisibleLayer > 0)
+        if (!isSiulationRunning || !HideGridOnSimulate)
         {
-            currentVisibleLayer--;
-            UpdateVisibleLayers();
+            if (currentVisibleLayer > 0)
+            {
+                currentVisibleLayer--;
+                UpdateVisibleLayers();
+            }
         }
     }
 
+    /// <summary>
+    /// Creates the bounding box for the visual grid.
+    /// </summary>
+    /// <remarks>
+    /// This method generates the 12 edges of a cube that represents the bounding box
+    /// of the grid. The edges are created using LineRenderer components and are stored
+    /// in the boundingBoxLines list.
+    /// </remarks>
     private void CreateBoundingBox()
     {
         ClearExistingLines(boundingBoxLines);
@@ -189,7 +218,7 @@ public class VisualGrid : MonoBehaviour
     /// </summary>
     private void CreateGrid()
     {
-        // Nettoyer les lignes existantes
+        // Clean up existing lines
         foreach (var layer in layerGrids)
         {
             foreach (var line in layer)
@@ -204,77 +233,43 @@ public class VisualGrid : MonoBehaviour
 
         gridOffset = new Vector3(gridSize / 2f, gridSize / 2f, gridSize / 2f) * cellSize;
 
-        // Créer une grille optimisée pour chaque couche
         for (int y = 0; y < gridSize; y++)
         {
             List<LineRenderer> layerLines = new();
             float yPos = y * cellSize;
             float yPosTop = (y + 1) * cellSize;
 
-            // 1. Créer le quadrillage inférieur (selon X et Z)
             for (int z = 0; z <= gridSize; z++)
             {
                 float zPos = z * cellSize;
-                // Lignes horizontales selon X (bas)
-                LineRenderer lineX = CreateLine(
-                    new Vector3(0, yPos, zPos) - gridOffset,
-                    new Vector3(gridSize * cellSize, yPos, zPos) - gridOffset,
-                    gridColor,
-                    gridLineWidth
-                );
+                LineRenderer lineX = CreateLine(new Vector3(0, yPos, zPos) - gridOffset, new Vector3(gridSize * cellSize, yPos, zPos) - gridOffset, gridColor, gridLineWidth);
                 layerLines.Add(lineX);
 
-                // Lignes horizontales selon X (haut) - seulement si nous ne sommes pas au dernier étage
-                LineRenderer lineXTop = CreateLine(
-                    new Vector3(0, yPosTop, zPos) - gridOffset,
-                    new Vector3(gridSize * cellSize, yPosTop, zPos) - gridOffset,
-                    gridColor,
-                    gridLineWidth
-                );
+                LineRenderer lineXTop = CreateLine(new Vector3(0, yPosTop, zPos) - gridOffset, new Vector3(gridSize * cellSize, yPosTop, zPos) - gridOffset, gridColor, gridLineWidth);
                 layerLines.Add(lineXTop);
             }
 
-            // 2. Lignes selon Z
             for (int x = 0; x <= gridSize; x++)
             {
                 float xPos = x * cellSize;
-                // Lignes horizontales selon Z (bas)
-                LineRenderer lineZ = CreateLine(
-                    new Vector3(xPos, yPos, 0) - gridOffset,
-                    new Vector3(xPos, yPos, gridSize * cellSize) - gridOffset,
-                    gridColor,
-                    gridLineWidth
-                );
+                LineRenderer lineZ = CreateLine(new Vector3(xPos, yPos, 0) - gridOffset, new Vector3(xPos, yPos, gridSize * cellSize) - gridOffset, gridColor, gridLineWidth);
                 layerLines.Add(lineZ);
 
-                // Lignes horizontales selon Z (haut)
-                LineRenderer lineZTop = CreateLine(
-                    new Vector3(xPos, yPosTop, 0) - gridOffset,
-                    new Vector3(xPos, yPos + cellSize, gridSize * cellSize) - gridOffset,
-                    gridColor,
-                    gridLineWidth
-                );
+                LineRenderer lineZTop = CreateLine(new Vector3(xPos, yPosTop, 0) - gridOffset, new Vector3(xPos, yPos + cellSize, gridSize * cellSize) - gridOffset, gridColor, gridLineWidth );
                 layerLines.Add(lineZTop);
             }
 
-            // 3. Lignes verticales entre les deux quadrillages
             for (int z = 0; z <= gridSize; z++)
             {
                 for (int x = 0; x <= gridSize; x++)
                 {
                     float xPos = x * cellSize;
                     float zPos = z * cellSize;
-                    LineRenderer lineY = CreateLine(
-                        new Vector3(xPos, yPos, zPos) - gridOffset,
-                        new Vector3(xPos, yPosTop, zPos) - gridOffset,
-                        gridColor,
-                        gridLineWidth
-                    );
+                    LineRenderer lineY = CreateLine(new Vector3(xPos, yPos, zPos) - gridOffset, new Vector3(xPos, yPosTop, zPos) - gridOffset, gridColor, gridLineWidth);
                     layerLines.Add(lineY);
                 }
             }
 
-            // Désactiver toutes les lignes par défaut
             foreach (var line in layerLines)
             {
                 line.gameObject.SetActive(false);
@@ -282,7 +277,6 @@ public class VisualGrid : MonoBehaviour
 
             layerGrids.Add(layerLines);
         }
-
         UpdateVisibleLayers();
     }
 
@@ -342,6 +336,78 @@ public class VisualGrid : MonoBehaviour
             }
         }
         _lines.Clear();
+    }
+
+    /// <summary>
+    /// Handles the pause state change event.
+    /// </summary>
+    /// <param name="isPaused">Indicates whether the game is paused.</param>
+    /// <remarks>
+    /// This method updates the local simulation running state and shows or hides the grid lines
+    /// based on the pause state and the HideGridOnSimulate setting.
+    /// </remarks>
+    private void HandlePauseStateChanged(bool isPaused)
+    {
+        isSiulationRunning = !isPaused;
+
+        if (HideGridOnSimulate)
+        {
+            if (isPaused)
+            {
+                ShowGridLines(true);
+            }
+            else
+            {
+                ShowGridLines(false);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Shows or hides the grid lines based on the specified parameter.
+    /// </summary>
+    /// <param name="show">If true, the grid lines will be shown; otherwise, they will be hidden.</param>
+    /// <remarks>
+    /// This method updates the visibility of the grid lines. If the grid has no layers, the method returns immediately.
+    /// When showing the grid lines, it calls <see cref="UpdateVisibleLayers"/> to update the visibility of the layers.
+    /// When hiding the grid lines, it iterates through all layers and deactivates each line.
+    /// </remarks>
+    public void ShowGridLines(bool show)
+    {
+        if (layerGrids.Count <= 0) return;
+
+        if (show)
+        {
+            UpdateVisibleLayers();
+        }
+        else
+        {
+            for (int y = 0; y < layerGrids.Count; y++)
+            {
+                foreach (var line in layerGrids[y])
+                {
+                    line.gameObject.SetActive(false);
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Sets the visibility of the grid when the game is playing.
+    /// </summary>
+    /// <param name="value">If true, the grid will be hidden when the game is playing; otherwise, it will be shown.</param>
+    /// <remarks>
+    /// This method updates the HideGridOnSimulate property and calls HandlePauseStateChanged
+    /// to update the grid visibility based on the current pause state.
+    /// </remarks>
+    public void SetHideGridWhenPlaying(bool value)
+    {
+        HideGridOnSimulate = value;
+
+        if (GameManager.Instance != null)
+        {
+            HandlePauseStateChanged(GameManager.Instance.IsPaused);
+        }
     }
 
     /// <summary>

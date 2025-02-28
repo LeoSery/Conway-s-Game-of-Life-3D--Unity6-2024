@@ -17,6 +17,11 @@ public class CellInteractionController : MonoBehaviour
     private VisualGrid visualGrid;
     private Vector3 gridOffset;
     private Vector3Int? lastHighlightedCell;
+
+    private int lastGridSize = -1;
+    private Vector3 cachedRayOrigin = new(0.5f, 0.5f, 0);
+    private float lastUpdateTime = 0f;
+    private const float UPDATE_THROTTLE = 0.05f;
     #endregion
 
     #region Unity Lifecycle Methods
@@ -32,12 +37,6 @@ public class CellInteractionController : MonoBehaviour
         }
 
         StartCoroutine(WaitForGameManager());
-
-        gridOffset = new Vector3(
-        -GameManager.Instance.gridSize / 2f,
-        -GameManager.Instance.gridSize / 2f,
-        -GameManager.Instance.gridSize / 2f
-        );
 
         visualGrid = GameManager.Instance.visualGrid;
     }
@@ -72,7 +71,8 @@ public class CellInteractionController : MonoBehaviour
 
         grid = GameManager.Instance.Grid;
         visualGrid = GameManager.Instance.visualGrid;
-        gridOffset = new Vector3(-5f, -5f, 0f);
+
+        UpdateGridOffset();
 
         if (InputManager.Instance != null)
         {
@@ -81,6 +81,24 @@ public class CellInteractionController : MonoBehaviour
         else
         {
             Debug.LogError("InputManager instance is null. Make sure it's initialized before CellInteractionController.");
+        }
+    }
+
+    private void UpdateGridOffset()
+    {
+        int currentGridSize = GameManager.Instance.gridSize;
+
+        if (currentGridSize != lastGridSize)
+        {
+            lastGridSize = currentGridSize;
+            float cellSize = GameManager.Instance.CellSize;
+            gridOffset.Set(
+                currentGridSize / 2f * cellSize,
+                currentGridSize / 2f * cellSize,
+                currentGridSize / 2f * cellSize
+            );
+
+            lastHighlightedCell = null;
         }
     }
 
@@ -116,7 +134,15 @@ public class CellInteractionController : MonoBehaviour
 
     private void UpdateCellHighlight()
     {
-        Ray ray = mainCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0));
+        float currentTime = Time.time;
+        if (currentTime - lastUpdateTime < UPDATE_THROTTLE)
+            return;
+
+        lastUpdateTime = currentTime;
+
+        UpdateGridOffset();
+
+        Ray ray = mainCamera.ViewportPointToRay(cachedRayOrigin);
         Vector3Int? targetCell = FindTargetCell(ray);
 
         if (targetCell.HasValue)
@@ -128,72 +154,57 @@ public class CellInteractionController : MonoBehaviour
                 lastHighlightedCell = targetCell;
             }
         }
-        else
+        else if (lastHighlightedCell.HasValue)
         {
-            if (lastHighlightedCell.HasValue)
-            {
-                visualGrid.UnhighlightCell();
-                lastHighlightedCell = null;
-            }
+            visualGrid.UnhighlightCell();
+            lastHighlightedCell = null;
         }
     }
 
     private Vector3Int? FindTargetCell(Ray _ray)
     {
-        Vector3 gridMin = gridOffset;
-        Vector3 gridMax = -gridOffset;
+        int gridSize = GameManager.Instance.gridSize;
+        float cellSize = GameManager.Instance.CellSize;
+        int currentVisibleLayer = visualGrid.CurrentVisibleLayer;
 
-        if (IntersectRayBox(_ray, gridMin, gridMax, out float tMin, out float tMax))
+        Vector3 gridMin = Vector3.zero - gridOffset;
+        Vector3 gridMax = new Vector3(gridSize * cellSize, gridSize * cellSize, gridSize * cellSize) - gridOffset;
+
+        float planeY = currentVisibleLayer * cellSize - gridOffset.y;
+
+        if (Mathf.Abs(_ray.direction.y) < 0.0001f)
         {
-            Vector3 entryPoint = _ray.GetPoint(tMin);
-            Vector3 exitPoint = _ray.GetPoint(tMax);
+            return null;
+        }
 
-            Vector3 direction = (exitPoint - entryPoint).normalized;
-            float distance = Vector3.Distance(entryPoint, exitPoint);
+        float t = (planeY - _ray.origin.y) / _ray.direction.y;
 
-            for (float t = 0; t <= distance; t += 0.1f)
+        if (t < 0)
+        {
+            return null;
+        }
+
+        Vector3 hitPoint = _ray.origin + _ray.direction * t;
+
+        if (hitPoint.x >= gridMin.x && hitPoint.x < gridMax.x &&
+            hitPoint.z >= gridMin.z && hitPoint.z < gridMax.z)
+        {
+            int3 cell = WorldToCellPosition(hitPoint);
+
+            cell.y = currentVisibleLayer;
+
+            if (IsValidCell(cell))
             {
-                Vector3 point = entryPoint + direction * t;
-                int3 cell = WorldToCellPosition(point);
-
-                if (IsValidCell(cell))
-                {
-                    if (visualGrid.VisibleLayers == 1)
-                    {
-                        if (cell.y == 0)
-                        {
-                            return new Vector3Int(cell.x, cell.y, cell.z);
-                        }
-                        else
-                        {
-                            return null;
-                        }
-                    }
-                    else if (cell.y < visualGrid.VisibleLayers)
-                    {
-                        return new Vector3Int(cell.x, cell.y, cell.z);
-                    }
-                }
+                return new Vector3Int(cell.x, cell.y, cell.z);
             }
         }
+
         return null;
-    }
-
-    private bool IntersectRayBox(Ray _ray, Vector3 _boxMin, Vector3 _boxMax, out float _tMin, out float _tMax)
-    {
-        Vector3 invDir = new(1f / _ray.direction.x, 1f / _ray.direction.y, 1f / _ray.direction.z);
-        Vector3 t1 = Vector3.Scale((_boxMin - _ray.origin), invDir);
-        Vector3 t2 = Vector3.Scale((_boxMax - _ray.origin), invDir);
-
-        _tMin = Mathf.Max(Mathf.Max(Mathf.Min(t1.x, t2.x), Mathf.Min(t1.y, t2.y)), Mathf.Min(t1.z, t2.z));
-        _tMax = Mathf.Min(Mathf.Min(Mathf.Max(t1.x, t2.x), Mathf.Max(t1.y, t2.y)), Mathf.Max(t1.z, t2.z));
-
-        return _tMax >= _tMin && _tMax >= 0;
     }
 
     private int3 WorldToCellPosition(Vector3 _worldPosition)
     {
-        Vector3 localPosition = _worldPosition - gridOffset;
+        Vector3 localPosition = _worldPosition + gridOffset;
         return new int3(
             Mathf.FloorToInt(localPosition.x),
             Mathf.FloorToInt(localPosition.y),

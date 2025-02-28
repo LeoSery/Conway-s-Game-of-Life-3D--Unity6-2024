@@ -70,7 +70,12 @@ public class CameraController : MonoBehaviour
 
     public void UpdateGridInfo()
     {
-        maxDistanceFromCenter = (GameManager.Instance.gridSize / 2f) + additionalDistanceFromGrid;
+        float gridDiagonal = Mathf.Sqrt(3) * GameManager.Instance.gridSize;
+
+        float fovRadians = mainCamera.fieldOfView * Mathf.Deg2Rad;
+        float minDistance = (gridDiagonal / 2) / Mathf.Tan(fovRadians / 2);
+
+        maxDistanceFromCenter = minDistance + additionalDistanceFromGrid;
     }
     #endregion
 

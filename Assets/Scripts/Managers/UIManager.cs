@@ -221,8 +221,8 @@ public class UIManager : MonoBehaviour
     {
         if (configPanel != null)
         {
-            configPanel.SetActive(_isPaused);
-            layerPanel.SetActive(_isPaused);
+            //configPanel.SetActive(_isPaused);
+            //layerPanel.SetActive(_isPaused);
         }
     }
 

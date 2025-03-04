@@ -162,6 +162,15 @@ public class GameManager : MonoBehaviour
         UpdateInterval += 0.1f;
         Debug.Log($"Speed Decreased - Old: {oldInterval}, New: {UpdateInterval}");
     }
+
+    public GameObject GetCellObjectAt(int3 position)
+    {
+        if (cellObjects.TryGetValue(position, out GameObject cellObject))
+        {
+            return cellObject;
+        }
+        return null;
+    }
     #endregion
 
     #region Private Methods

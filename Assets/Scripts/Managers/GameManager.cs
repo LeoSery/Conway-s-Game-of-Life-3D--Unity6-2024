@@ -1,9 +1,17 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
 using Unity.Mathematics;
 
 using UnityEngine;
+
+public enum LifeRule3D
+{
+    Life5766,
+    Life4555,
+    Life4644_Old
+}
 
 public class GameManager : MonoBehaviour
 {
@@ -18,6 +26,9 @@ public class GameManager : MonoBehaviour
     #endregion
 
     #region Fields and Properties
+    [Header("Simulation Rules")]
+    public LifeRule3D selectedRule = LifeRule3D.Life5766;
+
     [Header("Simulation Settings")]
     [SerializeField] private float updateInterval = 1f;
     public int gridSize = 10;
@@ -51,6 +62,8 @@ public class GameManager : MonoBehaviour
     }
     public Grid Grid { get; private set; }
     public bool IsPaused => isPaused;
+
+    private Func<byte, int, byte> determineNewState;
     #endregion
 
     #region Unity Lifecycle Methods
@@ -62,6 +75,7 @@ public class GameManager : MonoBehaviour
             DontDestroyOnLoad(gameObject);
             CalculateAndSetPoolSize(gridSize);
             InitializeGrid();
+            AssignRuleFunction();
         }
         else
         {
@@ -212,6 +226,19 @@ public class GameManager : MonoBehaviour
         }
     }
 
+    private void AssignRuleFunction()
+    {
+        determineNewState = selectedRule switch
+        {
+            LifeRule3D.Life5766 => DetermineNewState_5766,
+            LifeRule3D.Life4555 => DetermineNewState_4555,
+            LifeRule3D.Life4644_Old => DetermineNewState_4644,
+            _ => DetermineNewState_5766,
+        };
+
+        Debug.Log($"Selected rule: {selectedRule}");
+    }
+
     private void UpdateGrid()
     {
         var cellsToUpdate = Grid.GetActiveCells().ToList();
@@ -222,7 +249,7 @@ public class GameManager : MonoBehaviour
             {
                 int3 position = cell.Position;
                 int aliveNeighbors = Grid.CountAliveNeighbors(position);
-                byte newState = DetermineNewState(cell.State, aliveNeighbors);
+                byte newState = determineNewState(cell.State, aliveNeighbors);
 
                 if (newState != cell.State)
                 {
@@ -255,17 +282,48 @@ public class GameManager : MonoBehaviour
         cellPool.Initialize(cellPrefab, cellContainer, _gridSize);
     }
 
-    private byte DetermineNewState(byte _currentState, int _aliveNeighbors)
+    // "Life 4644 (B4/S4-6)" 3D conway game rules. (Default, old rule of this project)
+    private byte DetermineNewState_4644(byte _currentState, int _aliveNeighbors)
     {
         if (_currentState == CellState.Alive)
         {
-            // A living cell survives if it has 4, 5 or 6 living neighbors
+            // Cell survival if number of living neighbors is between 4,and 6.
             return (byte)((_aliveNeighbors >= 4 && _aliveNeighbors <= 6) ? CellState.Alive : CellState.Dead);
         }
         else
         {
-            // A dead cell is born if it has exactly 4 living neighbors.
+            // Birth of cell if number of living neighbords == 4.
             return (byte)(_aliveNeighbors == 4 ? CellState.Alive : CellState.Dead);
+        }
+    }
+
+    // "Life 5766 (B6/S5-7)" 3D conway game rules. (Best)
+    private byte DetermineNewState_5766(byte _currentState, int _aliveNeighbors)
+    {
+        if (_currentState == CellState.Alive)
+        {
+            // Cell survival if number of living neighbors is between 5 and 7.
+            return (byte)((_aliveNeighbors >= 5 && _aliveNeighbors <= 7) ? CellState.Alive : CellState.Dead);
+        }
+        else
+        {
+            // Birth of cell if number of living neighbords == 6.
+            return (byte)((_aliveNeighbors == 6) ? CellState.Alive : CellState.Dead);
+        }
+    }
+
+    // "Life 4555 (B5/S4-5)" 3D conway game rules. (Second best)
+    private byte DetermineNewState_4555(byte _currentState, int _aliveNeighbors)
+    {
+        if (_currentState == CellState.Alive)
+        {
+            // Cell survival if neighbors == 4 or 5.
+            return (byte)((_aliveNeighbors == 4 || _aliveNeighbors == 5) ? CellState.Alive : CellState.Dead);
+        }
+        else
+        {
+            // Birth of cell if number of living neighbords == 5.
+            return (byte)((_aliveNeighbors == 5) ? CellState.Alive : CellState.Dead);
         }
     }
 
